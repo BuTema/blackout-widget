@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Графіки світла</string>
+    <string name="widget_description">Power outage schedule</string>
+    <string name="default_home_name">Home</string>
+
+    <string name="field_name">Location name (shown on the widget)</string>
+    <string name="field_city">City</string>
+    <string name="field_street">Street</string>
+    <string name="hint_street">Exactly as on the DTEK site, e.g. пров. 5-й Травневий</string>
+    <string name="field_house">House number</string>
+    <string name="field_group">Queue (optional)</string>
+    <string name="hint_group">Like 6.2. Leave empty to detect it from the address</string>
+
+    <string name="transparency">Widget transparency</string>
+    <string name="transparency_dark">Dark theme background opacity: %1$d%%</string>
+    <string name="transparency_light">Light theme background opacity: %1$d%%</string>
+
+    <string name="save_and_refresh">Save and refresh</string>
+    <string name="refreshing">Refreshing…</string>
+    <string name="add_widget">Add widget to home screen</string>
+    <string name="group_in_use">Queue in use: %1$s</string>
+    <string name="group_unknown">Queue not known yet</string>
+    <string name="last_data">Last data: %1$s</string>
+    <string name="last_error">Last refresh failed: %1$s</string>
+
+    <string name="power_on_now">Power is on</string>
+    <string name="power_off_now">No power</string>
+    <string name="power_on_next">Power will be on</string>
+    <string name="power_off_next">Power will be off</string>
+    <string name="tomorrow_suffix"> (tomorrow)</string>
+    <string name="all_day_on">Power is on all day</string>
+    <string name="no_data">No schedule yet</string>
+    <string name="never_updated">Not updated yet</string>
+    <string name="updated_today">Updated at %1$s</string>
+    <string name="updated_date">Updated %1$s at %2$s</string>
+
+    <string name="err_not_configured">Enter your street and house number, or the queue, in the app</string>
+    <string name="err_no_group">Could not find the queue for this address</string>
+    <string name="err_no_days">No schedule for queue %1$s</string>
+
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="tab_today">Today</string>
+    <string name="tab_tomorrow">Tomorrow</string>
+    <string name="refresh">Refresh</string>
+    <string name="until_on">until power returns</string>
+    <string name="until_off">until power off</string>
+    <string name="no_schedule_for_day">No schedule for this day yet</string>
+    <string name="tomorrow_hint">You will get a notification as soon as tomorrow’s schedule is published</string>
+    <string name="empty_hint">Enter your address in settings and press “Save and refresh”</string>
+    <string name="duration_fmt">%1$d h %2$02d min</string>
+    <string name="today_suffix"> (today)</string>
+    <string name="settings_place">Place</string>
+
+    <string name="notifications">Notifications</string>
+    <string name="notify_changed">Schedule changed</string>
+    <string name="notify_tomorrow">Tomorrow’s schedule published</string>
+    <string name="reminders_title">Reminders about power on and off</string>
+    <string name="lead_60">1 hour before</string>
+    <string name="lead_30">30 minutes before</string>
+    <string name="lead_15">15 minutes before</string>
+    <string name="at_change">At the moment of the change</string>
+    <string name="remind_off">About power off</string>
+    <string name="remind_on">About power returning</string>
+    <string name="notif_blocked">Notifications are turned off for the app in system settings</string>
+    <string name="notif_allow">Allow</string>
+    <string name="notif_test">Send a test notification</string>
+    <string name="notif_test_sent">Test notification sent</string>
+    <string name="notif_test_title">Графіки світла</string>
+    <string name="notif_test_text">Notifications work</string>
+
+    <string name="channel_changes">Schedule changes</string>
+    <string name="channel_reminders">Power reminders</string>
+    <string name="day_today">today</string>
+    <string name="day_tomorrow">tomorrow</string>
+    <string name="notif_published_title">Schedule for %1$s published</string>
+    <string name="notif_changed_title">Schedule for %1$s changed</string>
+    <string name="notif_off_ranges">Power off: %1$s</string>
+    <string name="notif_no_outages">No outages planned</string>
+    <string name="reminder_off_title">Power outage soon</string>
+    <string name="reminder_off_text">Power goes off at %1$s (in %2$s)</string>
+    <string name="reminder_on_title">Power coming back soon</string>
+    <string name="reminder_on_text">Power returns at %1$s (in %2$s)</string>
+    <string name="reminder_off_now_title">Power is off by schedule</string>
+    <string name="reminder_off_now_text_until">Expected back at %1$s</string>
+    <string name="reminder_on_now_title">Power should be on</string>
+    <string name="reminder_on_now_text_until">Next outage at %1$s</string>
+    <string name="reminder_now_text_unknown">Next change is not known yet</string>
+    <string name="minutes_short">%1$d min</string>
+    <string name="hours_short">%1$d h</string>
+</resources>

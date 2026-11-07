@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Графіки світла</string>
+    <string name="widget_description">Графік відключень світла</string>
+    <string name="default_home_name">Дім</string>
+
+    <string name="field_name">Назва місця (на віджеті)</string>
+    <string name="field_city">Місто</string>
+    <string name="field_street">Вулиця</string>
+    <string name="hint_street">Так само, як на сайті ДТЕК, напр. пров. 5-й Травневий</string>
+    <string name="field_house">Номер будинку</string>
+    <string name="field_group">Черга (необов’язково)</string>
+    <string name="hint_group">Наприклад 6.2. Залиште порожнім, щоб визначити за адресою</string>
+
+    <string name="transparency">Прозорість віджета</string>
+    <string name="transparency_dark">Непрозорість фону, темна тема: %1$d%%</string>
+    <string name="transparency_light">Непрозорість фону, світла тема: %1$d%%</string>
+
+    <string name="save_and_refresh">Зберегти й оновити</string>
+    <string name="refreshing">Оновлення…</string>
+    <string name="add_widget">Додати віджет на головний екран</string>
+    <string name="group_in_use">Черга: %1$s</string>
+    <string name="group_unknown">Чергу ще не визначено</string>
+    <string name="last_data">Останні дані: %1$s</string>
+    <string name="last_error">Останнє оновлення не вдалося: %1$s</string>
+
+    <string name="power_on_now">Світло є</string>
+    <string name="power_off_now">Немає світла</string>
+    <string name="power_on_next">Світло буде</string>
+    <string name="power_off_next">Світла не буде</string>
+    <string name="tomorrow_suffix"> (завтра)</string>
+    <string name="all_day_on">Світло є весь день</string>
+    <string name="no_data">Графіка ще немає</string>
+    <string name="never_updated">Ще не оновлено</string>
+    <string name="updated_today">Оновлено о %1$s</string>
+    <string name="updated_date">Оновлено %1$s о %2$s</string>
+
+    <string name="err_not_configured">Вкажіть вулицю та номер будинку або чергу в застосунку</string>
+    <string name="err_no_group">Не вдалося визначити чергу за цією адресою</string>
+    <string name="err_no_days">Немає графіка для черги %1$s</string>
+
+    <string name="settings">Налаштування</string>
+    <string name="back">Назад</string>
+    <string name="tab_today">Сьогодні</string>
+    <string name="tab_tomorrow">Завтра</string>
+    <string name="refresh">Оновити</string>
+    <string name="until_on">до появи світла</string>
+    <string name="until_off">до відключення</string>
+    <string name="no_schedule_for_day">Графік на цей день ще не опубліковано</string>
+    <string name="tomorrow_hint">Щойно графік на завтра з’явиться, ви отримаєте сповіщення</string>
+    <string name="empty_hint">Вкажіть адресу в налаштуваннях і натисніть «Зберегти й оновити»</string>
+    <string name="duration_fmt">%1$d год %2$02d хв</string>
+    <string name="today_suffix"> (сьогодні)</string>
+    <string name="settings_place">Місце</string>
+
+    <string name="notifications">Сповіщення</string>
+    <string name="notify_changed">Графік змінився</string>
+    <string name="notify_tomorrow">Опубліковано графік на завтра</string>
+    <string name="reminders_title">Нагадування про зміну стану світла</string>
+    <string name="lead_60">За 1 годину</string>
+    <string name="lead_30">За 30 хвилин</string>
+    <string name="lead_15">За 15 хвилин</string>
+    <string name="at_change">У момент зміни</string>
+    <string name="remind_off">Про відключення</string>
+    <string name="remind_on">Про появу світла</string>
+    <string name="notif_blocked">Сповіщення для застосунку вимкнено в системі</string>
+    <string name="notif_allow">Дозволити</string>
+    <string name="notif_test">Надіслати тестове сповіщення</string>
+    <string name="notif_test_sent">Тестове сповіщення надіслано</string>
+    <string name="notif_test_title">Графіки світла</string>
+    <string name="notif_test_text">Сповіщення працюють</string>
+
+    <string name="channel_changes">Зміни графіка</string>
+    <string name="channel_reminders">Нагадування про світло</string>
+    <string name="day_today">сьогодні</string>
+    <string name="day_tomorrow">завтра</string>
+    <string name="notif_published_title">Опубліковано графік на %1$s</string>
+    <string name="notif_changed_title">Графік на %1$s змінився</string>
+    <string name="notif_off_ranges">Світла не буде: %1$s</string>
+    <string name="notif_no_outages">Відключень не заплановано</string>
+    <string name="reminder_off_title">Скоро відключення світла</string>
+    <string name="reminder_off_text">Світла не буде з %1$s (через %2$s)</string>
+    <string name="reminder_on_title">Скоро з’явиться світло</string>
+    <string name="reminder_on_text">Світло буде з %1$s (через %2$s)</string>
+    <string name="reminder_off_now_title">Світло вимкнули за графіком</string>
+    <string name="reminder_off_now_text_until">Світло має з’явитися о %1$s</string>
+    <string name="reminder_on_now_title">За графіком світло має бути</string>
+    <string name="reminder_on_now_text_until">Наступне відключення о %1$s</string>
+    <string name="reminder_now_text_unknown">Наступну зміну поки невідомо</string>
+    <string name="minutes_short">%1$d хв</string>
+    <string name="hours_short">%1$d год</string>
+</resources>
