@@ -7,7 +7,9 @@ data class Settings(
     val city: String = "м. Одеса",
     val street: String = "",
     val house: String = "",
-    /** "GPV6.2" if the user picked the group by hand, otherwise empty (detected from the address). */
+    /** True: use [manualGroup] (picked by hand). False: find the group from the address. */
+    val byGroup: Boolean = false,
+    /** "GPV6.2", picked by hand; only used when [byGroup] is true. */
     val manualGroup: String = "",
     /** Group found from the address on an earlier fetch. */
     val detectedGroup: String = "",
@@ -52,6 +54,12 @@ object Prefs {
             city = p.getString("city", d.city) ?: d.city,
             street = p.getString("street", d.street) ?: d.street,
             house = p.getString("house", d.house) ?: d.house,
+            // Older versions had no switch: a hand-picked group simply overrode the address.
+            byGroup = if (p.contains("byGroup")) {
+                p.getBoolean("byGroup", d.byGroup)
+            } else {
+                !p.getString("manualGroup", "").isNullOrBlank()
+            },
             manualGroup = p.getString("manualGroup", d.manualGroup) ?: d.manualGroup,
             detectedGroup = p.getString("detectedGroup", d.detectedGroup) ?: d.detectedGroup,
             darkAlpha = p.getFloat("darkAlpha", d.darkAlpha),
@@ -73,6 +81,7 @@ object Prefs {
             .putString("city", s.city)
             .putString("street", s.street)
             .putString("house", s.house)
+            .putBoolean("byGroup", s.byGroup)
             .putString("manualGroup", s.manualGroup)
             .putString("detectedGroup", s.detectedGroup)
             .putFloat("darkAlpha", s.darkAlpha)

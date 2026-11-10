@@ -50,24 +50,25 @@ object Refresher {
 
     private suspend fun doRefresh(ctx: Context, now: Long): Cache {
         val s = Prefs.load(ctx)
-        val manual = GroupUtil.normalizeGroup(s.manualGroup)
-        val hasAddress = s.street.isNotBlank() && s.house.isNotBlank()
-        if (manual == null && !hasAddress && s.detectedGroup.isBlank()) {
-            throw DtekException(ctx.getString(R.string.err_not_configured))
-        }
+        // Exactly one source is in use, chosen in settings: the queue picked by hand, or the address.
+        val manual = if (s.byGroup) GroupUtil.normalizeGroup(s.manualGroup) else null
+        val hasAddress = !s.byGroup && s.street.isNotBlank() && s.house.isNotBlank()
+        val configured = if (s.byGroup) manual != null else hasAddress || s.detectedGroup.isNotBlank()
+        if (!configured) throw DtekException(ctx.getString(R.string.err_not_configured))
 
-        val lookup = manual == null && hasAddress
+        val lookup = hasAddress
         val raw = DtekClient(ctx).fetch(
             city = if (lookup) s.city else "",
             street = if (lookup) s.street else "",
         )
 
         var group = manual
-        if (group == null && raw.home != null) {
+        if (group == null && lookup && raw.home != null) {
             group = FactParser.groupForHouse(raw.home, s.house)
             if (group != null) Prefs.saveDetectedGroup(ctx, group)
         }
-        if (group == null) group = s.detectedGroup.ifBlank { null }
+        // Never fall back to an old detected group when the user picked a queue by hand.
+        if (group == null && !s.byGroup) group = s.detectedGroup.ifBlank { null }
         if (group == null) {
             val extra = raw.warning?.let { " ($it)" } ?: ""
             throw DtekException(ctx.getString(R.string.err_no_group) + extra)

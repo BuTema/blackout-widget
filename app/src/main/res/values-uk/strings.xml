@@ -4,13 +4,6 @@
     <string name="widget_description">Графік відключень світла</string>
     <string name="default_home_name">Дім</string>
 
-    <string name="field_name">Назва місця (на віджеті)</string>
-    <string name="field_city">Місто</string>
-    <string name="field_street">Вулиця</string>
-    <string name="hint_street">Так само, як на сайті ДТЕК, напр. пров. 5-й Травневий</string>
-    <string name="field_house">Номер будинку</string>
-    <string name="field_group">Черга (необов’язково)</string>
-    <string name="hint_group">Наприклад 6.2. Залиште порожнім, щоб визначити за адресою</string>
 
     <string name="transparency">Прозорість віджета</string>
     <string name="transparency_dark">Непрозорість фону, темна тема: %1$d%%</string>
@@ -76,17 +69,44 @@
     <string name="day_tomorrow">завтра</string>
     <string name="notif_published_title">Опубліковано графік на %1$s</string>
     <string name="notif_changed_title">Графік на %1$s змінився</string>
-    <string name="notif_off_ranges">Світла не буде: %1$s</string>
+    <string name="notif_off_ranges">Вимкнуть: %1$s</string>
     <string name="notif_no_outages">Відключень не заплановано</string>
-    <string name="reminder_off_title">Скоро відключення світла</string>
-    <string name="reminder_off_text">Світла не буде з %1$s (через %2$s)</string>
-    <string name="reminder_on_title">Скоро з’явиться світло</string>
-    <string name="reminder_on_text">Світло буде з %1$s (через %2$s)</string>
-    <string name="reminder_off_now_title">Світло вимкнули за графіком</string>
-    <string name="reminder_off_now_text_until">Світло має з’явитися о %1$s</string>
-    <string name="reminder_on_now_title">За графіком світло має бути</string>
-    <string name="reminder_on_now_text_until">Наступне відключення о %1$s</string>
+    <string name="reminder_off_title">Скоро вимкнуть світло</string>
+    <string name="reminder_off_text">Світло вимкнуть о %1$s (через %2$s)</string>
+    <string name="reminder_on_title">Скоро повернуть світло</string>
+    <string name="reminder_on_text">Світло повернуть о %1$s (через %2$s)</string>
+    <string name="reminder_off_now_title">Світло вимкнуть зараз</string>
+    <string name="reminder_off_now_text_until">Повернуть о %1$s</string>
+    <string name="reminder_on_now_title">Світло повернуть зараз</string>
+    <string name="reminder_on_now_text_until">Далі вимкнуть о %1$s</string>
     <string name="reminder_now_text_unknown">Наступну зміну поки невідомо</string>
     <string name="minutes_short">%1$d хв</string>
     <string name="hours_short">%1$d год</string>
+    <string name="state_on">Світло Є</string>
+    <string name="state_off">Світла немає</string>
+
+    <string name="field_name">Назва місця (на віджеті)</string>
+    <string name="field_city">Місто / селище</string>
+    <string name="field_street">Вулиця</string>
+    <string name="field_house">Будинок</string>
+
+    <string name="settings_place_card">Місце</string>
+    <string name="settings_source">Як визначити чергу</string>
+    <string name="source_address">За адресою</string>
+    <string name="source_address_desc">Підкажемо вулиці й будинки з бази ДТЕК та самі знайдемо чергу</string>
+    <string name="source_group">За чергою</string>
+    <string name="source_group_desc">Якщо ви вже знаєте свою чергу (підгрупу)</string>
+    <string name="pick_group">Оберіть чергу</string>
+    <string name="settings_widget_card">Віджет</string>
+
+    <string name="addr_hint">Почніть вводити вулицю — підкажемо варіанти з бази ДТЕК</string>
+    <string name="addr_city_not_found">Такого населеного пункту немає в базі ДТЕК. Оберіть зі списку</string>
+    <string name="addr_street_not_found">Такої вулиці немає в базі ДТЕК. Оберіть зі списку</string>
+    <string name="addr_house_not_found">Будинку з таким номером немає на цій вулиці. Оберіть зі списку</string>
+    <string name="addr_no_group">ДТЕК не вказує чергу для цього будинку. Оберіть чергу вручну</string>
+    <string name="addr_checking">Перевіряємо адресу…</string>
+    <string name="addr_found">✓ Адресу знайдено · черга %1$s</string>
+    <string name="addr_saved">✓ Збережена адреса · черга %1$s</string>
+    <string name="addr_unverified">Не вдалося перевірити адресу (немає зв’язку з ДТЕК). Її можна зберегти як є</string>
+    <string name="save_disabled_hint">Заповніть адресу з підказок або оберіть чергу</string>
 </resources>

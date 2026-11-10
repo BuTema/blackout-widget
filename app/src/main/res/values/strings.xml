@@ -4,13 +4,6 @@
     <string name="widget_description">Power outage schedule</string>
     <string name="default_home_name">Home</string>
 
-    <string name="field_name">Location name (shown on the widget)</string>
-    <string name="field_city">City</string>
-    <string name="field_street">Street</string>
-    <string name="hint_street">Exactly as on the DTEK site, e.g. пров. 5-й Травневий</string>
-    <string name="field_house">House number</string>
-    <string name="field_group">Queue (optional)</string>
-    <string name="hint_group">Like 6.2. Leave empty to detect it from the address</string>
 
     <string name="transparency">Widget transparency</string>
     <string name="transparency_dark">Dark theme background opacity: %1$d%%</string>
@@ -76,17 +69,44 @@
     <string name="day_tomorrow">tomorrow</string>
     <string name="notif_published_title">Schedule for %1$s published</string>
     <string name="notif_changed_title">Schedule for %1$s changed</string>
-    <string name="notif_off_ranges">Power off: %1$s</string>
+    <string name="notif_off_ranges">Will go off: %1$s</string>
     <string name="notif_no_outages">No outages planned</string>
-    <string name="reminder_off_title">Power outage soon</string>
-    <string name="reminder_off_text">Power goes off at %1$s (in %2$s)</string>
-    <string name="reminder_on_title">Power coming back soon</string>
-    <string name="reminder_on_text">Power returns at %1$s (in %2$s)</string>
-    <string name="reminder_off_now_title">Power is off by schedule</string>
-    <string name="reminder_off_now_text_until">Expected back at %1$s</string>
-    <string name="reminder_on_now_title">Power should be on</string>
-    <string name="reminder_on_now_text_until">Next outage at %1$s</string>
+    <string name="reminder_off_title">Power will go off soon</string>
+    <string name="reminder_off_text">Power will go off at %1$s (in %2$s)</string>
+    <string name="reminder_on_title">Power will return soon</string>
+    <string name="reminder_on_text">Power will return at %1$s (in %2$s)</string>
+    <string name="reminder_off_now_title">Power goes off now</string>
+    <string name="reminder_off_now_text_until">Will return at %1$s</string>
+    <string name="reminder_on_now_title">Power returns now</string>
+    <string name="reminder_on_now_text_until">Next off at %1$s</string>
     <string name="reminder_now_text_unknown">Next change is not known yet</string>
     <string name="minutes_short">%1$d min</string>
     <string name="hours_short">%1$d h</string>
+    <string name="state_on">Power ON</string>
+    <string name="state_off">Power OFF</string>
+
+    <string name="field_name">Location name (shown on the widget)</string>
+    <string name="field_city">City / village</string>
+    <string name="field_street">Street</string>
+    <string name="field_house">House</string>
+
+    <string name="settings_place_card">Place</string>
+    <string name="settings_source">How to find your queue</string>
+    <string name="source_address">By address</string>
+    <string name="source_address_desc">We suggest streets and houses from the DTEK database and find the queue for you</string>
+    <string name="source_group">By queue</string>
+    <string name="source_group_desc">If you already know your queue (subgroup)</string>
+    <string name="pick_group">Pick your queue</string>
+    <string name="settings_widget_card">Widget</string>
+
+    <string name="addr_hint">Start typing a street - we will suggest options from the DTEK database</string>
+    <string name="addr_city_not_found">This place is not in the DTEK database. Pick one from the list</string>
+    <string name="addr_street_not_found">This street is not in the DTEK database. Pick one from the list</string>
+    <string name="addr_house_not_found">No such house number on this street. Pick one from the list</string>
+    <string name="addr_no_group">DTEK names no queue for this house. Pick the queue by hand</string>
+    <string name="addr_checking">Checking the address…</string>
+    <string name="addr_found">✓ Address found · queue %1$s</string>
+    <string name="addr_saved">✓ Saved address · queue %1$s</string>
+    <string name="addr_unverified">Could not check the address (no connection to DTEK). It can be saved as it is</string>
+    <string name="save_disabled_hint">Fill in the address from the suggestions or pick a queue</string>
 </resources>

@@ -36,19 +36,18 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
-/** One "time range + caption" pair: "12:00 - 16:00" / "Power will be on". */
-private class Line(val time: String, val caption: String, val on: Boolean)
+/** One period: "12:00" to "16:00" with an optional caption such as "Power will be on". */
+private class Line(val from: String, val to: String, val caption: String, val on: Boolean)
 
 /** Everything the widget draws, already resolved to strings, so drawing is trivial. */
 private class Ui(
     val name: String,
     val updated: String,
+    /** "Power ON" / "Power OFF" right after the update time; null when there is no schedule. */
+    val status: String?,
+    val statusOn: Boolean,
     val first: Line?,
     val second: Line?,
     val message: String?,
@@ -67,12 +66,17 @@ private object Palette {
     val mutedDark = Color(0xFF8E8E93)
     val mutedLight = Color(0xFF6B6B70)
 
+    // Period times: orange = power on, gray = power off, as in the reference widget.
     val onDark = Color(0xFFFF9F0A)
     val onLight = Color(0xFFE08600)
-
-    // "Power off" time text: gray, as in the reference widget.
     val offDark = Color(0xFFB0B0B5)
     val offLight = Color(0xFF6B6B70)
+
+    // The status line right below the update time: green = power is on now, red = off.
+    val goodDark = Color(0xFF4CD27A)
+    val goodLight = Color(0xFF1F8A3C)
+    val badDark = Color(0xFFFF6B5F)
+    val badLight = Color(0xFFC62828)
 }
 
 class ScheduleWidget : GlanceAppWidget() {
@@ -87,16 +91,15 @@ class ScheduleWidget : GlanceAppWidget() {
         val settings = Prefs.load(context)
         val cache = Prefs.loadCache(context)
         val status = Prefs.loadStatus(context)
+        val now = LocalDateTime.now(ScheduleLogic.ZONE)
 
         val name = settings.name.ifBlank { context.getString(R.string.default_home_name) }
-        val updated = updatedText(context, cache?.updatedAtMillis, status.lastError != null)
+        val updated = UpdatedText.format(context, cache?.updatedAtMillis, status.lastError != null)
 
-        val state = if (cache == null) {
-            WidgetState.NoData
-        } else {
-            ScheduleLogic.state(cache.days, LocalDateTime.now(ScheduleLogic.ZONE))
-        }
+        val state = if (cache == null) WidgetState.NoData else ScheduleLogic.state(cache.days, now)
 
+        var statusText: String? = null
+        var statusOn = false
         var first: Line? = null
         var second: Line? = null
         var message: String? = null
@@ -104,39 +107,46 @@ class ScheduleWidget : GlanceAppWidget() {
         when (state) {
             WidgetState.NoData -> message = context.getString(R.string.no_data)
             WidgetState.AllDayOn -> {
+                statusText = context.getString(R.string.state_on)
+                statusOn = true
                 message = context.getString(R.string.all_day_on)
                 messageOn = true
             }
             is WidgetState.Periods -> {
                 val cur = state.current
-                first = Line(
-                    range(cur),
-                    context.getString(if (cur.on) R.string.power_on_now else R.string.power_off_now),
-                    cur.on,
-                )
+                statusText = context.getString(if (cur.on) R.string.state_on else R.string.state_off)
+                statusOn = cur.on
+                // The status line already says what the current period is, so it needs no caption.
+                first = Line(ScheduleLogic.hm(cur.start), ScheduleLogic.hm(cur.end), "", cur.on)
                 val next = state.next
                 if (next != null) {
-                    val today = LocalDateTime.now(ScheduleLogic.ZONE).toLocalDate()
                     var caption = context.getString(if (next.on) R.string.power_on_next else R.string.power_off_next)
-                    if (next.start.toLocalDate() != today) caption += context.getString(R.string.tomorrow_suffix)
-                    second = Line(range(next), caption, next.on)
+                    if (next.start.toLocalDate() != now.toLocalDate()) caption += context.getString(R.string.tomorrow_suffix)
+                    second = Line(ScheduleLogic.hm(next.start), ScheduleLogic.hm(next.end), caption, next.on)
                 }
             }
         }
-        return Ui(name, updated, first, second, message, messageOn, settings.darkAlpha, settings.lightAlpha)
+        return Ui(
+            name, updated, statusText, statusOn, first, second, message, messageOn,
+            settings.darkAlpha, settings.lightAlpha,
+        )
     }
-
-    private fun range(p: Period): String = ScheduleLogic.hm(p.start) + " - " + ScheduleLogic.hm(p.end)
-
-    private fun updatedText(context: Context, updatedMillis: Long?, failed: Boolean): String =
-        UpdatedText.format(context, updatedMillis, failed)
 }
 
 @Composable
 private fun WidgetContent(ui: Ui) {
-    val width = LocalSize.current.width
-    val timeSize = if (width >= 150.dp) 20.sp else 16.sp
-    val captionSize = if (width >= 150.dp) 12.sp else 11.sp
+    val size = LocalSize.current
+    val pad = 12.dp
+    // Text is sized from the real widget width: "18:00 - 06:00" is about 13 characters of bold text, and
+    // this keeps it as large as it can be without being cut off.
+    val innerWidth = (size.width - pad * 2).value.coerceAtLeast(60f)
+    val tight = size.width < 160.dp
+    val timeSize = (innerWidth / (if (tight) 6.6f else 7.4f)).coerceIn(14f, 30f).sp
+    val statusSize = (innerWidth / 7.6f).coerceIn(14f, 26f).sp
+    val tall = size.height >= 150.dp
+    val nameSize = if (tall) 17.sp else 15.sp
+    val captionSize = if (tall) 12.sp else 11.sp
+    val showNextCaption = size.height >= 130.dp
 
     val background = ColorProvider(
         day = Palette.bgLight.copy(alpha = ui.lightAlpha),
@@ -146,13 +156,15 @@ private fun WidgetContent(ui: Ui) {
     val muted = ColorProvider(day = Palette.mutedLight, night = Palette.mutedDark)
     val on = ColorProvider(day = Palette.onLight, night = Palette.onDark)
     val off = ColorProvider(day = Palette.offLight, night = Palette.offDark)
+    val good = ColorProvider(day = Palette.goodLight, night = Palette.goodDark)
+    val bad = ColorProvider(day = Palette.badLight, night = Palette.badDark)
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(background)
             .cornerRadius(22.dp)
-            .padding(14.dp)
+            .padding(pad)
             .clickable(actionRunCallback<RefreshAction>()),
         verticalAlignment = Alignment.Top,
     ) {
@@ -170,7 +182,7 @@ private fun WidgetContent(ui: Ui) {
             Text(
                 text = ui.name,
                 maxLines = 1,
-                style = TextStyle(color = text, fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = text, fontSize = nameSize, fontWeight = FontWeight.Bold),
             )
         }
         Text(
@@ -178,6 +190,18 @@ private fun WidgetContent(ui: Ui) {
             maxLines = 1,
             style = TextStyle(color = muted, fontSize = 10.sp),
         )
+        if (ui.status != null) {
+            Spacer(modifier = GlanceModifier.height(6.dp))
+            Text(
+                text = ui.status,
+                maxLines = 1,
+                style = TextStyle(
+                    color = if (ui.statusOn) good else bad,
+                    fontSize = statusSize,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+        }
         Spacer(modifier = GlanceModifier.defaultWeight())
 
         if (ui.message != null) {
@@ -185,17 +209,17 @@ private fun WidgetContent(ui: Ui) {
                 text = ui.message,
                 style = TextStyle(
                     color = if (ui.messageOn) on else muted,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = if (ui.status != null) captionSize else 18.sp,
+                    fontWeight = if (ui.status != null) FontWeight.Normal else FontWeight.Bold,
                 ),
             )
         }
         if (ui.first != null) {
-            LineBlock(ui.first, timeSize, captionSize, on, off, muted)
+            LineBlock(ui.first, tight, timeSize, captionSize, true, on, off, muted)
         }
         if (ui.second != null) {
-            Spacer(modifier = GlanceModifier.height(8.dp))
-            LineBlock(ui.second, timeSize, captionSize, on, off, muted)
+            Spacer(modifier = GlanceModifier.height(6.dp))
+            LineBlock(ui.second, tight, timeSize, captionSize, showNextCaption, on, off, muted)
         }
         Spacer(modifier = GlanceModifier.defaultWeight())
     }
@@ -204,15 +228,19 @@ private fun WidgetContent(ui: Ui) {
 @Composable
 private fun LineBlock(
     line: Line,
+    tight: Boolean,
     timeSize: androidx.compose.ui.unit.TextUnit,
     captionSize: androidx.compose.ui.unit.TextUnit,
+    showCaption: Boolean,
     on: androidx.glance.unit.ColorProvider,
     off: androidx.glance.unit.ColorProvider,
     muted: androidx.glance.unit.ColorProvider,
 ) {
+    // Narrow widgets drop the spaces around the dash so the times can be set larger.
+    val range = if (tight) line.from + "–" + line.to else line.from + " - " + line.to
     Column {
         Text(
-            text = line.time,
+            text = range,
             maxLines = 1,
             style = TextStyle(
                 color = if (line.on) on else off,
@@ -220,11 +248,13 @@ private fun LineBlock(
                 fontWeight = FontWeight.Bold,
             ),
         )
-        Text(
-            text = line.caption,
-            maxLines = 1,
-            style = TextStyle(color = muted, fontSize = captionSize),
-        )
+        if (showCaption && line.caption.isNotEmpty()) {
+            Text(
+                text = line.caption,
+                maxLines = 1,
+                style = TextStyle(color = muted, fontSize = captionSize),
+            )
+        }
     }
 }
 
