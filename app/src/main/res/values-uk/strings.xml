@@ -21,7 +21,7 @@
     <string name="power_off_now">Немає світла</string>
     <string name="power_on_next">Світло буде</string>
     <string name="power_off_next">Світла не буде</string>
-    <string name="tomorrow_suffix"> (завтра)</string>
+    <string name="tomorrow_suffix">" (завтра)"</string>
     <string name="all_day_on">Світло є весь день</string>
     <string name="no_data">Графіка ще немає</string>
     <string name="never_updated">Ще не оновлено</string>
@@ -43,7 +43,7 @@
     <string name="tomorrow_hint">Щойно графік на завтра з’явиться, ви отримаєте сповіщення</string>
     <string name="empty_hint">Додайте місце в налаштуваннях і натисніть «Зберегти й оновити»</string>
     <string name="duration_fmt">%1$d год %2$02d хв</string>
-    <string name="today_suffix"> (сьогодні)</string>
+    <string name="today_suffix">" (сьогодні)"</string>
     <string name="settings_place">Місце</string>
 
     <string name="notifications">Сповіщення</string>

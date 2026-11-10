@@ -1,6 +1,11 @@
 package com.artem.blackoutwidget
 
 import android.content.Context
+import android.content.SharedPreferences
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 
 /** Options that are the same for every place: widget look and notifications. */
 data class Settings(
@@ -44,6 +49,23 @@ object Prefs {
         ctx.applicationContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
     // ---- Global settings ----
+
+    /**
+     * Emits whenever anything in the settings file changes. The widget listens to it from inside its
+     * composition: Glance keeps a composition alive for a while and does not rebuild it on update(),
+     * so the widget has to notice new data (a day switch, a chosen place, a download) by itself.
+     */
+    fun changes(ctx: Context): Flow<Unit> = callbackFlow {
+        val prefs = sp(ctx)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(Unit) }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.conflate()
+
+    /** Makes every open widget rebuild itself (time passed, so "now" moved). */
+    fun poke(ctx: Context) {
+        sp(ctx).edit().putLong("poke", System.currentTimeMillis()).apply()
+    }
 
     fun load(ctx: Context): Settings {
         val p = sp(ctx)

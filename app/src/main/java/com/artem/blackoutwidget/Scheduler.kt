@@ -36,6 +36,7 @@ class TickReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
+                Prefs.poke(app)
                 ScheduleWidget().updateAll(app)
             } finally {
                 pending.finish()

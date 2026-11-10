@@ -21,7 +21,7 @@
     <string name="power_off_now">No power</string>
     <string name="power_on_next">Power will be on</string>
     <string name="power_off_next">Power will be off</string>
-    <string name="tomorrow_suffix"> (tomorrow)</string>
+    <string name="tomorrow_suffix">" (tomorrow)"</string>
     <string name="all_day_on">Power is on all day</string>
     <string name="no_data">No schedule yet</string>
     <string name="never_updated">Not updated yet</string>
@@ -43,7 +43,7 @@
     <string name="tomorrow_hint">You will get a notification as soon as tomorrow’s schedule is published</string>
     <string name="empty_hint">Add a place in settings and press “Save and refresh”</string>
     <string name="duration_fmt">%1$d h %2$02d min</string>
-    <string name="today_suffix"> (today)</string>
+    <string name="today_suffix">" (today)"</string>
     <string name="settings_place">Place</string>
 
     <string name="notifications">Notifications</string>

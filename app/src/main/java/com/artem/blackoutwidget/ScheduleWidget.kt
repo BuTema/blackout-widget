@@ -3,6 +3,9 @@ package com.artem.blackoutwidget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,6 +43,10 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import java.time.LocalDateTime
 import java.util.Locale
 
@@ -134,8 +141,20 @@ class ScheduleWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val ui = buildUi(context, appWidgetId)
-        provideContent { WidgetContent(ui) }
+        val initial = buildUi(context, appWidgetId)
+        provideContent {
+            // Glance keeps this composition running for a while and update() does not rerun provideGlance
+            // meanwhile, so the widget follows the stored data itself: a tap on the day switch, a place
+            // chosen, a download finished - each is a write to the settings, and the UI is rebuilt at once.
+            val flow = remember {
+                Prefs.changes(context)
+                    .onStart { emit(Unit) }
+                    .map { buildUi(context, appWidgetId) }
+                    .flowOn(Dispatchers.Default)
+            }
+            val ui by flow.collectAsState(initial)
+            WidgetContent(ui)
+        }
     }
 
     private fun resolvePlace(context: Context, appWidgetId: Int): Place? {
@@ -266,7 +285,7 @@ private fun TinyContent(ui: Ui) {
     val inner = (size.width - pad * 2).value.coerceAtLeast(30f)
     val showName = size.height >= 100.dp
     // "06:30" is about 2.9 character widths per point of font size; the two times are stacked.
-    val fitWidth = inner * FIT / 2.6f
+    val fitWidth = inner * FIT / 2.9f
     val heightLeft = size.height.value * FIT - pad.value * 2 - (if (showName) 20f else 0f)
     val fitHeight = heightLeft / (2 * 1.15f)
     val timeSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 44f).sp
@@ -377,10 +396,13 @@ private fun SquareContent(ui: Ui) {
     val captionSize = if (h >= 150f) 12f else 11f
     val showNextCaption = h >= 150f
     val wide = size.width >= 140.dp
+    // Only widgets bigger than 2x2 carry the today/tomorrow switch; a 2x2 shows what is going on now.
+    val canSwitch = size.height >= 160.dp || size.width >= 170.dp
+    val showTomorrow = canSwitch && ui.showTomorrow
 
     // "06:30–13:30" is about 5.1 character widths of bold text per point of font size, so this is the
     // largest size that still fits the width. The person's size setting scales it; the height caps it.
-    val fitWidth = innerWidth * FIT / 5.1f
+    val fitWidth = innerWidth / 5.6f
     val headerHeight = nameSize * 1.3f + (if (showUpdated) 13f else 0f)
     val lines = if (ui.next != null) 2 else 1
     val captionHeight = if (ui.next != null && showNextCaption) captionSize * 1.25f else 0f
@@ -397,7 +419,7 @@ private fun SquareContent(ui: Ui) {
             .clickable(actionRunCallback<RefreshAction>()),
         verticalAlignment = Alignment.Top,
     ) {
-        Header(ui, c, nameSize, showIcon = wide && h >= 110f, showSwitch = true)
+        Header(ui, c, nameSize, showIcon = wide && h >= 110f, showSwitch = canSwitch)
         if (showUpdated) {
             Text(
                 text = ui.updated,
@@ -407,7 +429,7 @@ private fun SquareContent(ui: Ui) {
         }
         Spacer(modifier = GlanceModifier.defaultWeight())
 
-        val day = if (ui.showTomorrow) ui.days.getOrNull(1) else null
+        val day = if (showTomorrow) ui.days.getOrNull(1) else null
         if (day != null) {
             // Tomorrow: every period, as many as fit.
             val lineSize = (timeSize * 0.8f).coerceAtLeast(12f)
@@ -479,7 +501,8 @@ private fun WideContent(ui: Ui) {
     val c = colorsFor(ui)
     val pad = 8f
     val inner = size.width.value - pad * 2
-    val h = size.height.value * FIT
+    // The reported height is the least the widget has, so heights are fitted to it exactly: nothing is cut off.
+    val h = size.height.value
     val scale = ui.textScale.coerceIn(0.8f, 1.5f)
     val labelWidth = 40f
 
@@ -508,12 +531,30 @@ private fun WideContent(ui: Ui) {
         rowsOf(tomorrow, perRowOf(tomorrow)) * fBoth * 1.4f + graphH(pillLarge)
     val both = tomorrow != null && h >= needBoth
 
-    val fOne = fontOf(perRowOf(if (ui.showTomorrow) tomorrow else today), 22f)
     val oneDay = if (ui.showTomorrow) tomorrow else today
-    val needBig = pad * 2 + headerH + bigH + 3 * gap +
-        rowsOf(oneDay, perRowOf(oneDay)) * fOne * 1.4f + graphH(pillSmall)
-    val showBig = both || (!ui.showTomorrow && h >= needBig)
-    val thick = both || h >= 170f
+    val thick = both || h >= 150f
+    val pill = if (thick) pillLarge else pillSmall
+    val headerGap = 2 * gap + graphH(pill)
+
+    // One day: the periods get the largest font at which they fill the width and the height that is left,
+    // in 1..4 columns, whichever arrangement allows the biggest text.
+    data class Fit(val perRow: Int, val font: Float)
+    fun bestFit(day: DayView?, availableHeight: Float): Fit {
+        val n = day?.lines?.size ?: 1
+        var best = Fit(1, 11f)
+        for (perRow in 1..minOf(maxPerRow, n).coerceAtLeast(1)) {
+            val rows = (n + perRow - 1) / perRow
+            val byWidth = ((inner * FIT / perRow) - 8f) / 5.4f
+            val byHeight = availableHeight / (rows * 1.45f)
+            val font = minOf(byWidth, byHeight, 40f)
+            if (font > best.font) best = Fit(perRow, font)
+        }
+        return Fit(best.perRow, if (scale < 1f) best.font * scale else best.font)
+    }
+    val availablePlain = h - (pad * 2 + headerH + 13f + headerGap)
+    val availableBig = availablePlain - (bigH - 13f)
+    val showBig = both || (!ui.showTomorrow && bestFit(oneDay, availableBig).font >= 18f)
+    val fit = bestFit(oneDay, if (showBig) availableBig else availablePlain)
 
     Column(
         modifier = GlanceModifier
@@ -559,15 +600,14 @@ private fun WideContent(ui: Ui) {
 
         if (!both) {
             val day = oneDay
-            if (day != null) {
-                val perRow = perRowOf(day)
-                val font = fontOf(perRow, 22f)
-                val used = pad * 2 + headerH + (if (showBig) bigH else 13f) + 2 * gap + graphH(if (thick) pillLarge else pillSmall)
-                val roomRows = ((h - used) / (font * 1.4f)).toInt().coerceAtLeast(1)
-                PeriodGrid(day, perRow, font, roomRows, c)
+            // The periods fill what is left between the header and the graph, centred in it.
+            Box(
+                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                if (day != null) PeriodGrid(day, fit.perRow, fit.font, 8, c)
             }
-            Spacer(modifier = GlanceModifier.defaultWeight())
-            if (day != null) GraphRow(day, labelWidth, c, if (thick) pillLarge else pillSmall)
+            if (day != null) GraphRow(day, labelWidth, c, pill)
         } else {
             for (day in listOf(today, tomorrow)) {
                 if (day != null) {
@@ -603,7 +643,7 @@ private fun PeriodGrid(day: DayView, perRow: Int, fontSize: Float, maxRows: Int,
                             maxLines = 1,
                             style = TextStyle(
                                 color = if (line.on) c.on else c.off,
-                                fontSize = (if (isCurrent) fontSize * 1.12f else fontSize * 0.92f).sp,
+                                fontSize = (if (isCurrent) fontSize else fontSize * 0.9f).sp,
                                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                             ),
                         )

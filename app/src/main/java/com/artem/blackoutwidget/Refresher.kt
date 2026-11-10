@@ -33,6 +33,7 @@ object Refresher {
                 // A reminder problem must never turn a successful download into a "failed" refresh.
             }
         }
+        Prefs.poke(ctx)
         ScheduleWidget().updateAll(ctx)
     }
 
