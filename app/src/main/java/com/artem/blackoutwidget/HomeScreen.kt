@@ -49,6 +49,7 @@ import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private class PlaceRow(val place: Place, val cache: Cache?, val status: Status)
 
@@ -274,6 +275,11 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
 
             val today = cache?.days?.get(now.toLocalDate())
             if (today != null) {
+                Text(
+                    stringResource(R.string.tab_today) + " · " + now.toLocalDate().format(DateTimeFormatter.ofPattern("dd.MM")),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 PillGraph(ScheduleLogic.slotsOf(today), now.hour * 2 + now.minute / 30, on)
             }
         }

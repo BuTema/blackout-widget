@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -25,10 +27,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Opens when a widget is added (and when it is reconfigured): asks which place the widget shows.
@@ -71,8 +76,22 @@ class WidgetConfigActivity : ComponentActivity() {
                     ) {
                         Text(stringResource(R.string.widget_pick_place), style = MaterialTheme.typography.headlineSmall)
                         for (place in places) {
-                            Button(modifier = Modifier.fillMaxWidth(), onClick = { choose(place.id) }) {
-                                Text(place.name.ifBlank { stringResource(R.string.default_home_name) })
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { choose(place.id) },
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        place.name.ifBlank { stringResource(R.string.default_home_name) },
+                                        style = MaterialTheme.typography.titleLarge,
+                                    )
+                                    Text(
+                                        placeSubtitle(place),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                         OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { finish() }) {
@@ -84,16 +103,44 @@ class WidgetConfigActivity : ComponentActivity() {
         }
     }
 
-    /** Remembers which place this widget shows and lets the system add it. */
+    /**
+     * Remembers which place this widget shows, paints it from the saved schedule at once, and closes.
+     * Nothing is downloaded first: the schedule the app already has is shown immediately, and a fresh
+     * download is started in the background only when there is none or it is old.
+     */
     private fun choose(placeId: String?) {
         if (placeId != null) Prefs.assignWidget(this, appWidgetId, placeId)
         Scheduler.ensure(this)
-        Scheduler.refreshNow(this)
-        setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
-        // Repaint right away: this also runs when a widget without a place asks to be given one.
+        val cache = placeId?.let { Prefs.loadCache(this, it) }
+        val fresh = cache != null && System.currentTimeMillis() - cache.updatedAtMillis < FRESH_MS
+        if (!fresh) Scheduler.refreshNow(this)
+
+        val app = applicationContext
+        val id = appWidgetId
         CoroutineScope(Dispatchers.Main).launch {
-            ScheduleWidget().updateAll(applicationContext)
+            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+            // Close quickly even if the first paint is slow; the repeats below catch up.
+            withTimeoutOrNull(2_000L) { paint(app, id) }
             finish()
+            // The launcher may attach the widget a moment after this screen closes, and a repaint made
+            // before that can be lost (the widget then keeps its "loading" picture): repeat it.
+            for (wait in longArrayOf(1_200L, 3_000L, 8_000L)) {
+                delay(wait)
+                paint(app, id)
+            }
         }
+    }
+
+    private suspend fun paint(app: android.content.Context, id: Int) {
+        try {
+            val glanceId = GlanceAppWidgetManager(app).getGlanceIdBy(id)
+            ScheduleWidget().update(app, glanceId)
+        } catch (e: Exception) {
+            ScheduleWidget().updateAll(app)
+        }
+    }
+
+    private companion object {
+        const val FRESH_MS = 30L * 60L * 1000L
     }
 }
