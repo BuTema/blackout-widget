@@ -10,9 +10,9 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -83,6 +83,8 @@ private object Palette {
     val badDark = Color(0xFFFF6B5F)
     val badLight = Color(0xFFC62828)
 }
+
+private val PlaceKey = ActionParameters.Key<String>(MainActivity.EXTRA_PLACE)
 
 class ScheduleWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
@@ -190,10 +192,11 @@ private fun WidgetContent(ui: Ui) {
             .clickable(actionRunCallback<RefreshAction>()),
         verticalAlignment = Alignment.Top,
     ) {
-        val context = LocalContext.current
         Row(
-            modifier = GlanceModifier.fillMaxWidth()
-                .clickable(actionStartActivity(MainActivity.openIntent(context, ui.placeId))),
+            modifier = GlanceModifier.fillMaxWidth().clickable(
+                // The key name becomes the intent extra the app reads to open the right place.
+                actionStartActivity<MainActivity>(actionParametersOf(PlaceKey to (ui.placeId ?: ""))),
+            ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
