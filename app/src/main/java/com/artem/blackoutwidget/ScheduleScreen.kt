@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,27 +62,36 @@ private fun textOff(dark: Boolean) = if (dark) Color(0xFFFF7A6E) else Color(0xFF
 
 /** Home screen: today / tomorrow, the 24-hour grid (two rows of 12) and the list of periods. */
 @Composable
-fun ScheduleScreen(onOpenSettings: () -> Unit) {
+fun ScheduleScreen(placeId: String, onSelectPlace: (String) -> Unit, onOpenSettings: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val dark = isSystemInDarkTheme()
 
     var settings by remember { mutableStateOf(Prefs.load(ctx)) }
-    var cache by remember { mutableStateOf(Prefs.loadCache(ctx)) }
-    var status by remember { mutableStateOf(Prefs.loadStatus(ctx)) }
+    var places by remember { mutableStateOf(Prefs.places(ctx)) }
+    // The place that is shown: the chosen one, or the first if that one is gone.
+    val place = places.firstOrNull { it.id == placeId } ?: places.firstOrNull()
+    val shownId = place?.id
+    var cache by remember(shownId) { mutableStateOf(shownId?.let { Prefs.loadCache(ctx, it) }) }
+    var status by remember(shownId) {
+        mutableStateOf(shownId?.let { Prefs.loadStatus(ctx, it) } ?: Status(0L, null))
+    }
     var now by remember { mutableStateOf(LocalDateTime.now(ScheduleLogic.ZONE)) }
     var tab by rememberSaveable { mutableStateOf(0) }
     var refreshing by remember { mutableStateOf(false) }
 
     // Tick every second for the countdown; re-read stored data every 10 s so background updates show up.
-    LaunchedEffect(Unit) {
+    LaunchedEffect(shownId) {
         var n = 0
         while (true) {
             now = LocalDateTime.now(ScheduleLogic.ZONE)
             if (n % 10 == 0) {
                 settings = Prefs.load(ctx)
-                cache = Prefs.loadCache(ctx)
-                status = Prefs.loadStatus(ctx)
+                places = Prefs.places(ctx)
+                if (shownId != null) {
+                    cache = Prefs.loadCache(ctx, shownId)
+                    status = Prefs.loadStatus(ctx, shownId)
+                }
             }
             n++
             delay(1000)
@@ -94,7 +104,7 @@ fun ScheduleScreen(onOpenSettings: () -> Unit) {
     val hours = days[date]
     val widgetState = ScheduleLogic.state(days, now)
 
-    val title = settings.name.ifBlank { stringResource(R.string.default_home_name) }
+    val title = (place?.name ?: "").ifBlank { stringResource(R.string.default_home_name) }
     val untilOnText = stringResource(R.string.until_on)
     val untilOffText = stringResource(R.string.until_off)
 
@@ -129,6 +139,21 @@ fun ScheduleScreen(onOpenSettings: () -> Unit) {
                 }
             }
             TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.settings)) }
+        }
+
+        if (places.size > 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (p in places) {
+                    FilterChip(
+                        selected = p.id == shownId,
+                        onClick = { onSelectPlace(p.id) },
+                        label = { Text(p.name.ifBlank { stringResource(R.string.default_home_name) }) },
+                    )
+                }
+            }
         }
 
         if (cache == null) {
@@ -203,8 +228,10 @@ fun ScheduleScreen(onOpenSettings: () -> Unit) {
                         scope.launch {
                             Refresher.refresh(ctx)
                             settings = Prefs.load(ctx)
-                            cache = Prefs.loadCache(ctx)
-                            status = Prefs.loadStatus(ctx)
+                            if (shownId != null) {
+                                cache = Prefs.loadCache(ctx, shownId)
+                                status = Prefs.loadStatus(ctx, shownId)
+                            }
                             refreshing = false
                         }
                     },

@@ -10,11 +10,13 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
@@ -43,6 +45,8 @@ private class Line(val from: String, val to: String, val caption: String, val on
 
 /** Everything the widget draws, already resolved to strings, so drawing is trivial. */
 private class Ui(
+    /** The place shown; tapping the name opens the app on it. Null when no place exists yet. */
+    val placeId: String?,
     val name: String,
     val updated: String,
     /** "Power ON" / "Power OFF" right after the update time; null when there is no schedule. */
@@ -54,6 +58,7 @@ private class Ui(
     val messageOn: Boolean,
     val darkAlpha: Float,
     val lightAlpha: Float,
+    val textScale: Float,
 )
 
 private object Palette {
@@ -83,17 +88,26 @@ class ScheduleWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val ui = buildUi(context)
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val ui = buildUi(context, appWidgetId)
         provideContent { WidgetContent(ui) }
     }
 
-    private fun buildUi(context: Context): Ui {
+    private fun buildUi(context: Context, appWidgetId: Int): Ui {
         val settings = Prefs.load(context)
-        val cache = Prefs.loadCache(context)
-        val status = Prefs.loadStatus(context)
+        val place = Prefs.placeForWidget(context, appWidgetId)
+        if (place == null) {
+            return Ui(
+                null, context.getString(R.string.default_home_name), "", null, false, null, null,
+                context.getString(R.string.err_not_configured), false,
+                settings.darkAlpha, settings.lightAlpha, settings.textScale,
+            )
+        }
+        val cache = Prefs.loadCache(context, place.id)
+        val status = Prefs.loadStatus(context, place.id)
         val now = LocalDateTime.now(ScheduleLogic.ZONE)
 
-        val name = settings.name.ifBlank { context.getString(R.string.default_home_name) }
+        val name = place.name.ifBlank { context.getString(R.string.default_home_name) }
         val updated = UpdatedText.format(context, cache?.updatedAtMillis, status.lastError != null)
 
         val state = if (cache == null) WidgetState.NoData else ScheduleLogic.state(cache.days, now)
@@ -127,8 +141,8 @@ class ScheduleWidget : GlanceAppWidget() {
             }
         }
         return Ui(
-            name, updated, statusText, statusOn, first, second, message, messageOn,
-            settings.darkAlpha, settings.lightAlpha,
+            place.id, name, updated, statusText, statusOn, first, second, message, messageOn,
+            settings.darkAlpha, settings.lightAlpha, settings.textScale,
         )
     }
 }
@@ -136,17 +150,25 @@ class ScheduleWidget : GlanceAppWidget() {
 @Composable
 private fun WidgetContent(ui: Ui) {
     val size = LocalSize.current
-    val pad = 12.dp
-    // Text is sized from the real widget width: "18:00 - 06:00" is about 13 characters of bold text, and
-    // this keeps it as large as it can be without being cut off.
+    val pad = 10.dp
     val innerWidth = (size.width - pad * 2).value.coerceAtLeast(60f)
     val tight = size.width < 160.dp
-    val timeSize = (innerWidth / (if (tight) 6.6f else 7.4f)).coerceIn(14f, 30f).sp
-    val statusSize = (innerWidth / 7.6f).coerceIn(14f, 26f).sp
+    val statusSize = (innerWidth / 7.6f).coerceIn(14f, 26f)
     val tall = size.height >= 150.dp
     val nameSize = if (tall) 17.sp else 15.sp
     val captionSize = if (tall) 12.sp else 11.sp
     val showNextCaption = size.height >= 130.dp
+
+    // "06:30–13:30" is about 5.7 character widths of bold text per point of font size (6.3 with spaces
+    // around the dash), so this is the largest size that still fits the width. The person's size
+    // setting scales it; the height of the widget caps it so two periods never run out of room.
+    val fitWidth = innerWidth / (if (tight) 5.7f else 6.3f)
+    val lines = if (ui.second != null) 2 else 1
+    val headerHeight = 22f + 13f + (if (ui.status != null) statusSize * 1.25f + 6f else 0f)
+    val captionHeight = if (ui.second != null && showNextCaption) captionSize.value * 1.25f else 0f
+    val heightLeft = size.height.value - pad.value * 2 - headerHeight - captionHeight - 6f
+    val fitHeight = heightLeft / (lines * 1.25f)
+    val timeSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 44f).sp
 
     val background = ColorProvider(
         day = Palette.bgLight.copy(alpha = ui.lightAlpha),
@@ -168,8 +190,10 @@ private fun WidgetContent(ui: Ui) {
             .clickable(actionRunCallback<RefreshAction>()),
         verticalAlignment = Alignment.Top,
     ) {
+        val context = LocalContext.current
         Row(
-            modifier = GlanceModifier.fillMaxWidth().clickable(actionStartActivity<MainActivity>()),
+            modifier = GlanceModifier.fillMaxWidth()
+                .clickable(actionStartActivity(MainActivity.openIntent(context, ui.placeId))),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
@@ -197,7 +221,7 @@ private fun WidgetContent(ui: Ui) {
                 maxLines = 1,
                 style = TextStyle(
                     color = if (ui.statusOn) good else bad,
-                    fontSize = statusSize,
+                    fontSize = statusSize.sp,
                     fontWeight = FontWeight.Bold,
                 ),
             )
@@ -272,6 +296,11 @@ class ScheduleWidgetReceiver : GlanceAppWidgetReceiver() {
         super.onEnabled(context)
         Scheduler.ensure(context)
         Scheduler.refreshNow(context)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        for (id in appWidgetIds) Prefs.forgetWidget(context, id)
     }
 
     override fun onDisabled(context: Context) {

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -20,59 +21,47 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.updateAll
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 
-private val ALL_GROUPS = (1..6).flatMap { major -> (1..2).map { minor -> "GPV$major.$minor" } }
+internal val ALL_GROUPS = (1..6).flatMap { major -> (1..2).map { minor -> "GPV$major.$minor" } }
 
+/** App settings: the list of places, notifications and the look of the widget. */
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onEditPlace: (String) -> Unit, onAddPlace: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val initial = remember { Prefs.load(ctx) }
+    val places = remember { Prefs.places(ctx) }
 
-    var name by rememberSaveable { mutableStateOf(initial.name) }
-    var byGroup by rememberSaveable { mutableStateOf(initial.byGroup) }
-    var group by rememberSaveable { mutableStateOf(initial.manualGroup) }
-    var addressCheck by remember { mutableStateOf<AddressCheck?>(null) }
     var darkAlpha by remember { mutableStateOf(initial.darkAlpha) }
     var lightAlpha by remember { mutableStateOf(initial.lightAlpha) }
-    var status by remember { mutableStateOf(Prefs.loadStatus(ctx)) }
-    var cache by remember { mutableStateOf(Prefs.loadCache(ctx)) }
-    var detected by remember { mutableStateOf(initial.detectedGroup) }
-    var busy by remember { mutableStateOf(false) }
+    var textScale by remember { mutableStateOf(initial.textScale) }
 
     var notifyChanged by remember { mutableStateOf(initial.notifyChanged) }
     var notifyTomorrow by remember { mutableStateOf(initial.notifyTomorrow) }
@@ -86,48 +75,19 @@ fun SettingsScreen(onBack: () -> Unit) {
     // Bumped when the permission dialog closes, so the "blocked" notice is re-evaluated.
     var permissionTick by remember { mutableIntStateOf(0) }
 
-    // One hidden DTEK page shared by all address lookups while this screen is open.
-    val session = remember { DtekSession(ctx) }
-    DisposableEffect(Unit) { onDispose { session.close() } }
-
-    /** The address as it will be stored: DTEK's spelling when it was checked, the old one otherwise. */
-    fun addressToStore(): Triple<String, String, String> {
-        val c = addressCheck
-        return if (!byGroup && c != null && c.canSave) {
-            Triple(c.city, c.street, c.house)
-        } else {
-            Triple(initial.city, initial.street, initial.house)
-        }
-    }
-
-    fun current(): Settings {
-        val (city, street, house) = addressToStore()
-        val c = addressCheck
-        val detectedNow = when {
-            byGroup -> detected
-            c != null && c.canSave -> c.group.orEmpty()
-            else -> detected
-        }
-        return Settings(
-            name = name.trim(),
-            city = city,
-            street = street,
-            house = house,
-            byGroup = byGroup,
-            manualGroup = group,
-            detectedGroup = detectedNow,
-            darkAlpha = darkAlpha,
-            lightAlpha = lightAlpha,
-            notifyChanged = notifyChanged,
-            notifyTomorrow = notifyTomorrow,
-            lead60 = lead60,
-            lead30 = lead30,
-            lead15 = lead15,
-            atChange = atChange,
-            remindOff = remindOff,
-            remindOn = remindOn,
-        )
-    }
+    fun current() = Settings(
+        darkAlpha = darkAlpha,
+        lightAlpha = lightAlpha,
+        textScale = textScale,
+        notifyChanged = notifyChanged,
+        notifyTomorrow = notifyTomorrow,
+        lead60 = lead60,
+        lead30 = lead30,
+        lead15 = lead15,
+        atChange = atChange,
+        remindOff = remindOff,
+        remindOn = remindOn,
+    )
 
     fun repaint() {
         scope.launch { ScheduleWidget().updateAll(ctx) }
@@ -153,29 +113,6 @@ fun SettingsScreen(onBack: () -> Unit) {
         if (switchedOn) askNotificationPermission()
     }
 
-    // While a refresh runs, poll the stored result so the status line updates by itself.
-    LaunchedEffect(busy) {
-        if (!busy) return@LaunchedEffect
-        val startedAt = System.currentTimeMillis()
-        while (true) {
-            delay(1000)
-            val s = Prefs.loadStatus(ctx)
-            if (s.lastAttemptMillis >= startedAt) {
-                status = s
-                cache = Prefs.loadCache(ctx)
-                detected = Prefs.load(ctx).detectedGroup
-                busy = false
-                break
-            }
-        }
-    }
-
-    val canSave = !busy && if (byGroup) {
-        GroupUtil.normalizeGroup(group) != null
-    } else {
-        addressCheck?.canSave == true
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -188,93 +125,40 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium)
 
-        // ---- Place name ----
-        SectionCard(stringResource(R.string.settings_place_card)) {
-            OutlinedTextField(
-                value = name, onValueChange = { name = it }, singleLine = true,
-                label = { Text(stringResource(R.string.field_name)) },
-                placeholder = { Text(stringResource(R.string.default_home_name)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        // ---- Address or queue ----
-        SectionCard(stringResource(R.string.settings_source)) {
-            RadioRow(
-                title = stringResource(R.string.source_address),
-                description = stringResource(R.string.source_address_desc),
-                selected = !byGroup,
-                onSelect = { byGroup = false },
-            )
-            RadioRow(
-                title = stringResource(R.string.source_group),
-                description = stringResource(R.string.source_group_desc),
-                selected = byGroup,
-                onSelect = { byGroup = true },
-            )
-            Spacer(Modifier.padding(top = 4.dp))
-            if (byGroup) {
-                GroupPicker(selected = group, onSelect = { group = it })
-            } else {
-                AddressPicker(
-                    session = session,
-                    initialCity = initial.city,
-                    initialStreet = initial.street,
-                    initialHouse = initial.house,
-                    initialGroup = initial.detectedGroup,
-                    onCheck = { addressCheck = it },
-                )
-            }
-
-            Button(
-                enabled = canSave,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                onClick = {
-                    val saved = current()
-                    Prefs.save(ctx, saved)
-                    detected = saved.detectedGroup
-                    Scheduler.ensure(ctx)
-                    busy = true
-                    scope.launch { Refresher.refresh(ctx) }
-                },
-            ) {
-                Text(stringResource(if (busy) R.string.refreshing else R.string.save_and_refresh))
-            }
-            if (!canSave && !busy) {
+        // ---- Places ----
+        SectionCard(stringResource(R.string.places_title)) {
+            if (places.isEmpty()) {
                 Text(
-                    stringResource(R.string.save_disabled_hint),
-                    style = MaterialTheme.typography.bodySmall,
+                    stringResource(R.string.places_empty),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
-            val shownGroup = if (byGroup) {
-                GroupUtil.normalizeGroup(group)
-            } else {
-                addressCheck?.group ?: detected.ifBlank { null }
+            for (place in places) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEditPlace(place.id) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            place.name.ifBlank { stringResource(R.string.default_home_name) },
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            placeSubtitle(place),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text("›", style = MaterialTheme.typography.headlineSmall)
+                }
             }
-            Text(
-                text = if (shownGroup != null) {
-                    stringResource(R.string.group_in_use, shownGroup.removePrefix("GPV"))
-                } else {
-                    stringResource(R.string.group_unknown)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            val c = cache
-            val lastData = if (c == null) {
-                stringResource(R.string.never_updated)
-            } else {
-                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(c.updatedAtMillis)) +
-                    if (c.dtekUpdate.isNotBlank()) "  (DTEK: ${c.dtekUpdate})" else ""
-            }
-            Text(stringResource(R.string.last_data, lastData), style = MaterialTheme.typography.bodyMedium)
-            status.lastError?.let {
-                Text(
-                    stringResource(R.string.last_error, it),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onAddPlace) {
+                Text("+ " + stringResource(R.string.add_place))
             }
         }
 
@@ -357,13 +241,23 @@ fun SettingsScreen(onBack: () -> Unit) {
 
         // ---- Widget ----
         SectionCard(stringResource(R.string.settings_widget_card)) {
+            Text(stringResource(R.string.text_size, (textScale * 100).toInt()))
+            Slider(
+                value = textScale,
+                onValueChange = { textScale = it },
+                onValueChangeFinished = {
+                    Prefs.saveAppearance(ctx, darkAlpha, lightAlpha, textScale)
+                    repaint()
+                },
+                valueRange = 0.6f..1.6f,
+            )
             Text(stringResource(R.string.transparency), style = MaterialTheme.typography.titleSmall)
             Text(stringResource(R.string.transparency_dark, (darkAlpha * 100).toInt()))
             Slider(
                 value = darkAlpha,
                 onValueChange = { darkAlpha = it },
                 onValueChangeFinished = {
-                    Prefs.saveAlphas(ctx, darkAlpha, lightAlpha)
+                    Prefs.saveAppearance(ctx, darkAlpha, lightAlpha, textScale)
                     repaint()
                 },
                 valueRange = 0f..1f,
@@ -373,14 +267,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                 value = lightAlpha,
                 onValueChange = { lightAlpha = it },
                 onValueChangeFinished = {
-                    Prefs.saveAlphas(ctx, darkAlpha, lightAlpha)
+                    Prefs.saveAppearance(ctx, darkAlpha, lightAlpha, textScale)
                     repaint()
                 },
                 valueRange = 0f..1f,
             )
             OutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { requestPinWidget(ctx) },
+                onClick = {
+                    Prefs.setPendingWidgetPlace(ctx, null)
+                    requestPinWidget(ctx)
+                },
             ) {
                 Text(stringResource(R.string.add_widget))
             }
@@ -389,8 +286,22 @@ fun SettingsScreen(onBack: () -> Unit) {
     }
 }
 
+/** Second line of a place in lists: its street and house, or its queue. */
 @Composable
-private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun placeSubtitle(place: Place): String {
+    val group = place.knownGroup?.removePrefix("GPV")
+    return when {
+        place.byGroup && group != null -> stringResource(R.string.group_in_use, group)
+        !place.byGroup && place.street.isNotBlank() -> {
+            val address = place.street + if (place.house.isNotBlank()) ", " + place.house else ""
+            if (group != null) address + " · " + group else address
+        }
+        else -> stringResource(R.string.place_not_configured)
+    }
+}
+
+@Composable
+internal fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -406,7 +317,7 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 }
 
 @Composable
-private fun RadioRow(title: String, description: String, selected: Boolean, onSelect: () -> Unit) {
+internal fun RadioRow(title: String, description: String, selected: Boolean, onSelect: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -430,7 +341,7 @@ private fun RadioRow(title: String, description: String, selected: Boolean, onSe
 
 /** The twelve queues in rows of four. */
 @Composable
-private fun GroupPicker(selected: String, onSelect: (String) -> Unit) {
+internal fun GroupPicker(selected: String, onSelect: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.pick_group), style = MaterialTheme.typography.titleSmall)
         ALL_GROUPS.chunked(4).forEach { rowGroups ->
@@ -449,7 +360,7 @@ private fun GroupPicker(selected: String, onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange)
@@ -457,14 +368,14 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 }
 
 @Composable
-private fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = onChange)
         Text(label)
     }
 }
 
-private fun requestPinWidget(ctx: Context) {
+internal fun requestPinWidget(ctx: Context) {
     val manager = AppWidgetManager.getInstance(ctx)
     if (manager.isRequestPinAppWidgetSupported) {
         manager.requestPinAppWidget(ComponentName(ctx, ScheduleWidgetReceiver::class.java), null, null)

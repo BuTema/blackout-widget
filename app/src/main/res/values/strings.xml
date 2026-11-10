@@ -41,7 +41,7 @@
     <string name="until_off">until power off</string>
     <string name="no_schedule_for_day">No schedule for this day yet</string>
     <string name="tomorrow_hint">You will get a notification as soon as tomorrow’s schedule is published</string>
-    <string name="empty_hint">Enter your address in settings and press “Save and refresh”</string>
+    <string name="empty_hint">Add a place in settings and press “Save and refresh”</string>
     <string name="duration_fmt">%1$d h %2$02d min</string>
     <string name="today_suffix"> (today)</string>
     <string name="settings_place">Place</string>
@@ -109,4 +109,19 @@
     <string name="addr_saved">✓ Saved address · queue %1$s</string>
     <string name="addr_unverified">Could not check the address (no connection to DTEK). It can be saved as it is</string>
     <string name="save_disabled_hint">Fill in the address from the suggestions or pick a queue</string>
+
+    <string name="widget_pick_place">Which place should this widget show?</string>
+    <string name="cancel">Cancel</string>
+    <string name="text_size">Time size on the widget: %1$d%%</string>
+    <string name="places_title">My places</string>
+    <string name="places_empty">No places yet. Add the first one</string>
+    <string name="add_place">Add a place</string>
+    <string name="place_new">New place</string>
+    <string name="place_not_configured">Not filled in yet</string>
+    <string name="place_notify">Notifications for this place</string>
+    <string name="delete_place">Delete place</string>
+    <string name="delete_confirm_title">Delete “%1$s”?</string>
+    <string name="delete_confirm_text">The saved schedule and the widgets of this place will be removed</string>
+    <string name="delete">Delete</string>
+    <string name="widget_for_place">Add a widget for this place</string>
 </resources>

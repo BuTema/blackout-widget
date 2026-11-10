@@ -15,14 +15,19 @@ update time is marked with ⚠.
 1. Open the **Releases** page of this repository and download `blackout-widget.apk` from the
    **Latest build** release (every push to `main` replaces it).
 2. Open the file on the phone and allow installing from this source. Android 8.0+ is required.
-3. Open the app and choose how to find your queue: **By address** (type the street and house, the app
+3. Open the app and add a place (you can add several: home, parents, a dacha...). For each one choose how to find your queue: **By address** (type the street and house, the app
    suggests them from DTEK's own lists and checks that the address exists) or **By queue** (pick e.g.
    `6.2` yourself). Press **Save and refresh**, then **Add widget to home screen**.
 
-Tap the widget to refresh it; tap the name to open the app.
+Tap the widget to refresh it; tap the name to open the app on that place. Each widget shows one place:
+when you add a widget the app asks which one (long-press a widget to change it later), or use
+**Add a widget for this place** in the place's editor. The size of the period times can be changed in
+Settings → Widget.
 
 ## In the app
 
+- **Places** (Settings → My places): add, edit and delete addresses. With more than one, chips at the top of the
+  schedule screen switch between them. Notifications can be turned on or off per place.
 - **Schedule screen** with *Today* and *Tomorrow* tabs: the 24 hours as two rows of 12 cells (green = power
   on, red = off, a cell split in halves means a half-hour outage, the current hour is outlined), a countdown
   to the next change, and the list of periods with their length. Past periods are dimmed.

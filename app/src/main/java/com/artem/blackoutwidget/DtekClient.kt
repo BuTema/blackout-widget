@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -36,18 +37,22 @@ class DtekBridge(private val onResult: (String) -> Unit) {
 class DtekClient(context: Context) {
     private val appContext = context.applicationContext
 
-    class Raw(val fact: String, val home: String?, val warning: String?)
+    /** [homes] has one entry per requested lookup, in order: the getHomeNum answer, or null if none. */
+    class Raw(val fact: String, val homes: List<String?>, val warning: String?)
 
-    /** Pass blank [city]/[street] to skip the address lookup and only read the schedule. */
-    suspend fun fetch(city: String, street: String): Raw {
+    /**
+     * Loads the page once and reads the schedule of every queue. [lookups] are (city, street) pairs whose
+     * house lists are fetched too, from the same page; a pair with a blank part is skipped (null answer).
+     */
+    suspend fun fetch(lookups: List<Pair<String, String>>): Raw {
         val raw = withContext(Dispatchers.Main) {
-            withTimeoutOrNull(TIMEOUT_MS) { loadInWebView(city, street) }
+            withTimeoutOrNull(TIMEOUT_MS) { loadInWebView(lookups) }
         }
         return raw ?: throw DtekException("Timed out while loading the DTEK page")
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private suspend fun loadInWebView(city: String, street: String): Raw =
+    private suspend fun loadInWebView(lookups: List<Pair<String, String>>): Raw =
         suspendCancellableCoroutine { cont ->
             val handler = Handler(Looper.getMainLooper())
             val web = WebView(appContext)
@@ -75,7 +80,7 @@ class DtekClient(context: Context) {
                 web.evaluateJavascript(READY_JS) { value ->
                     if (done) return@evaluateJavascript
                     if (value == "true") {
-                        web.evaluateJavascript(buildScript(city, street), null)
+                        web.evaluateJavascript(buildScript(lookups), null)
                     } else if (attempts >= MAX_ATTEMPTS) {
                         finish(
                             Result.failure(
@@ -105,7 +110,12 @@ class DtekClient(context: Context) {
                             if (fact.isEmpty()) {
                                 finish(Result.failure(DtekException(warning ?: "Empty schedule data")))
                             } else {
-                                finish(Result.success(Raw(fact, o.optString("home", "").ifEmpty { null }, warning)))
+                                val homes = ArrayList<String?>()
+                                val array = o.optJSONArray("homes")
+                                for (i in 0 until lookups.size) {
+                                    homes.add(array?.optString(i, "")?.ifEmpty { null })
+                                }
+                                finish(Result.success(Raw(fact, homes, warning)))
                             }
                         } catch (e: Exception) {
                             finish(Result.failure(e))
@@ -132,10 +142,11 @@ class DtekClient(context: Context) {
             web.loadUrl(PAGE_URL)
         }
 
-    private fun buildScript(city: String, street: String): String =
-        SCRIPT
-            .replace("__CITY__", JSONObject.quote(city))
-            .replace("__STREET__", JSONObject.quote(street))
+    private fun buildScript(lookups: List<Pair<String, String>>): String {
+        val array = JSONArray()
+        for ((city, street) in lookups) array.put(JSONArray().put(city).put(street))
+        return SCRIPT.replace("__LOOKUPS__", array.toString())
+    }
 
     private companion object {
         const val PAGE_URL = "https://www.dtek-oem.com.ua/ua/shutdowns"
@@ -148,44 +159,54 @@ class DtekClient(context: Context) {
         // Runs inside the page. Reports back through AndroidBridge.result(json).
         val SCRIPT = """
             (function () {
-              var out = {};
+              var out = {homes: []};
               try { out.fact = JSON.stringify(DisconSchedule.fact); }
               catch (e) { out.error = 'fact: ' + e; }
-              var city = __CITY__;
-              var street = __STREET__;
-              if (!city || !street) { AndroidBridge.result(JSON.stringify(out)); return; }
+              var lookups = __LOOKUPS__;
+              function done() { AndroidBridge.result(JSON.stringify(out)); }
+              function fail(e) {
+                out.homes.push('');
+                out.error = (out.error || '') + ' home: ' + e;
+              }
+              var token = '';
               try {
                 var meta = document.querySelector('meta[name="csrf-token"]');
-                var token = meta ? meta.getAttribute('content')
+                token = meta ? meta.getAttribute('content')
                   : (window.yii && yii.getCsrfToken ? yii.getCsrfToken() : '');
-                var body = new URLSearchParams();
-                body.append('method', 'getHomeNum');
-                body.append('data[0][name]', 'city');
-                body.append('data[0][value]', city);
-                body.append('data[1][name]', 'street');
-                body.append('data[1][value]', street);
-                body.append('data[2][name]', 'updateFact');
-                body.append('data[2][value]', (DisconSchedule.fact && DisconSchedule.fact.update) || '');
-                fetch('/ua/ajax', {
-                  method: 'POST',
-                  credentials: 'same-origin',
-                  headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'X-CSRF-Token': token,
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json, text/javascript, */*; q=0.01'
-                  },
-                  body: body.toString()
-                }).then(function (r) { return r.text(); })
-                  .then(function (t) { out.home = t; AndroidBridge.result(JSON.stringify(out)); })
-                  .catch(function (e) {
-                    out.error = (out.error || '') + ' home: ' + e;
-                    AndroidBridge.result(JSON.stringify(out));
-                  });
-              } catch (e) {
-                out.error = (out.error || '') + ' home: ' + e;
-                AndroidBridge.result(JSON.stringify(out));
+              } catch (e) {}
+              function next(i) {
+                if (i >= lookups.length) { done(); return; }
+                var city = lookups[i][0];
+                var street = lookups[i][1];
+                if (!city || !street) { out.homes.push(''); next(i + 1); return; }
+                try {
+                  var body = new URLSearchParams();
+                  body.append('method', 'getHomeNum');
+                  body.append('data[0][name]', 'city');
+                  body.append('data[0][value]', city);
+                  body.append('data[1][name]', 'street');
+                  body.append('data[1][value]', street);
+                  body.append('data[2][name]', 'updateFact');
+                  body.append('data[2][value]', (DisconSchedule.fact && DisconSchedule.fact.update) || '');
+                  fetch('/ua/ajax', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                      'X-CSRF-Token': token,
+                      'X-Requested-With': 'XMLHttpRequest',
+                      'Accept': 'application/json, text/javascript, */*; q=0.01'
+                    },
+                    body: body.toString()
+                  }).then(function (r) { return r.text(); })
+                    .then(function (t) { out.homes.push(t); next(i + 1); })
+                    .catch(function (e) { fail(e); next(i + 1); });
+                } catch (e) {
+                  fail(e);
+                  next(i + 1);
+                }
               }
+              next(0);
             })();
         """.trimIndent()
     }

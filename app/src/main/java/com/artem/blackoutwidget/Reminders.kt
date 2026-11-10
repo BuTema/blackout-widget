@@ -31,8 +31,7 @@ object Reminders {
         am.cancel(pi)
 
         val options = Prefs.load(app).reminderOptions()
-        val cache = Prefs.loadCache(app)
-        if (!options.enabled || cache == null) return
+        if (!options.enabled) return
 
         val nowMs = System.currentTimeMillis()
         var handledMs = Prefs.loadHandledUntil(app)
@@ -41,24 +40,37 @@ object Reminders {
             handledMs = nowMs
             Prefs.saveHandledUntil(app, handledMs)
         }
-        val next = ReminderPlanner
-            .pending(cache.days, options, toLocal(handledMs), toLocal(nowMs))
-            .firstOrNull() ?: return
+        // The next reminder of any place that has notifications on.
+        var nextAt: LocalDateTime? = null
+        for (place in Prefs.places(app)) {
+            if (!place.notify) continue
+            val cache = Prefs.loadCache(app, place.id) ?: continue
+            val first = ReminderPlanner
+                .pending(cache.days, options, toLocal(handledMs), toLocal(nowMs))
+                .firstOrNull() ?: continue
+            val soonest = nextAt
+            if (soonest == null || first.fireAt.isBefore(soonest)) nextAt = first.fireAt
+        }
+        val at = nextAt ?: return
         // A reminder that is already due (alarm delayed, or just planned) fires almost immediately.
-        arm(am, pi, maxOf(toMillis(next.fireAt), nowMs + 1_000L))
+        arm(am, pi, maxOf(toMillis(at), nowMs + 1_000L))
     }
 
     /** Runs when the alarm goes off. */
     fun fire(ctx: Context) {
         val app = ctx.applicationContext
         val options = Prefs.load(app).reminderOptions()
-        val cache = Prefs.loadCache(app)
         val nowMs = System.currentTimeMillis()
-        if (options.enabled && cache != null) {
+        if (options.enabled) {
             val now = toLocal(nowMs)
-            val pending = ReminderPlanner.pending(cache.days, options, toLocal(Prefs.loadHandledUntil(app)), now)
-            for (r in ReminderPlanner.due(pending, now.plusSeconds(5))) {
-                Notifier.reminder(app, r)
+            val handled = toLocal(Prefs.loadHandledUntil(app))
+            for (place in Prefs.places(app)) {
+                if (!place.notify) continue
+                val cache = Prefs.loadCache(app, place.id) ?: continue
+                val pending = ReminderPlanner.pending(cache.days, options, handled, now)
+                for (r in ReminderPlanner.due(pending, now.plusSeconds(5))) {
+                    Notifier.reminder(app, place, r)
+                }
             }
         }
         // Everything up to (about) now is handled, even if nothing was shown (data changed meanwhile).
