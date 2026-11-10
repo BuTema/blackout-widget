@@ -19,15 +19,19 @@ update time is marked with ⚠.
    suggests them from DTEK's own lists and checks that the address exists) or **By queue** (pick e.g.
    `6.2` yourself). Press **Save and refresh**, then **Add widget to home screen**.
 
-Tap the widget to refresh it; tap the name to open the app on that place. Each widget shows one place:
+One widget adapts to its size: 1x1 shows only the current period, 2x2/2x3 the current and next one (with a
+*tomorrow* switch in the corner), 4x2 and bigger the periods of the day and 48 pills (orange = power, gray = none),
+and tall wide ones both days at once. Tap the widget to refresh it; tap the name to open the app on that place. Each widget shows one place:
 when you add a widget the app asks which one (long-press a widget to change it later), or use
 **Add a widget for this place** in the place's editor. The size of the period times can be changed in
 Settings → Widget.
 
 ## In the app
 
-- **Places** (Settings → My places): add, edit and delete addresses. With more than one, chips at the top of the
-  schedule screen switch between them. Notifications can be turned on or off per place.
+- **Home screen**: one card per place (current period, next one, the day as 48 pills). Press and hold a card to
+  drag it to another position, tap it for the full schedule, **+** (bottom right) adds a place. In a place's editor
+  you pick the DTEK region (Odesa, Kyiv region, Dnipro, Kyiv city), the name, address or queue, and whether it
+  sends notifications.
 - **Schedule screen** with *Today* and *Tomorrow* tabs: the 24 hours as two rows of 12 cells (green = power
   on, red = off, a cell split in halves means a half-hour outage, the current hour is outlined), a countdown
   to the next change, and the list of periods with their length. Past periods are dimmed.
