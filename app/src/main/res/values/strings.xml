@@ -124,4 +124,6 @@
     <string name="delete_confirm_text">The saved schedule and the widgets of this place will be removed</string>
     <string name="delete">Delete</string>
     <string name="widget_for_place">Add a widget for this place</string>
+    <string name="state_on_short">Power on</string>
+    <string name="state_off_short">Power off</string>
 </resources>

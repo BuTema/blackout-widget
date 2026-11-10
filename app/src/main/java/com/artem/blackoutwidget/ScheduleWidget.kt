@@ -26,6 +26,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -43,6 +44,12 @@ import java.time.LocalDateTime
 /** One period: "12:00" to "16:00" with an optional caption such as "Power will be on". */
 private class Line(val from: String, val to: String, val caption: String, val on: Boolean)
 
+/** [slots] half-hour slots in a row with the same state. */
+private class Run(val on: Boolean, val slots: Int)
+
+/** One day as a line: today or tomorrow, with the half-hour slot of "now" (today only). */
+private class Bar(val label: String, val runs: List<Run>, val nowSlot: Int?)
+
 /** Everything the widget draws, already resolved to strings, so drawing is trivial. */
 private class Ui(
     /** The place shown; tapping the name opens the app on it. Null when no place exists yet. */
@@ -59,6 +66,10 @@ private class Ui(
     val darkAlpha: Float,
     val lightAlpha: Float,
     val textScale: Float,
+    /** Short status for the smallest widget, e.g. "Є світло". */
+    val statusShort: String? = null,
+    /** Today's and (when published) tomorrow's schedule as lines, for the wide widget. */
+    val bars: List<Bar> = emptyList(),
 )
 
 private object Palette {
@@ -142,15 +153,38 @@ class ScheduleWidget : GlanceAppWidget() {
                 }
             }
         }
+        val statusShort = statusText?.let {
+            context.getString(if (statusOn) R.string.state_on_short else R.string.state_off_short)
+        }
+        val bars = ArrayList<Bar>()
+        if (cache != null) {
+            for ((offset, label) in listOf(0 to R.string.tab_today, 1 to R.string.tab_tomorrow)) {
+                val hours = cache.days[now.toLocalDate().plusDays(offset.toLong())] ?: continue
+                val runs = ScheduleLogic.runs(ScheduleLogic.slotsOf(hours)).map { Run(it.first, it.second) }
+                val nowSlot = if (offset == 0) now.hour * 2 + now.minute / 30 else null
+                bars.add(Bar(context.getString(label), runs, nowSlot))
+            }
+        }
         return Ui(
             place.id, name, updated, statusText, statusOn, first, second, message, messageOn,
-            settings.darkAlpha, settings.lightAlpha, settings.textScale,
+            settings.darkAlpha, settings.lightAlpha, settings.textScale, statusShort, bars,
         )
     }
 }
 
+/** One widget that adapts to the size the person drags it to: tiny, square (2x2) or wide (4x2 and up). */
 @Composable
 private fun WidgetContent(ui: Ui) {
+    val width = LocalSize.current.width
+    when {
+        width < 100.dp -> TinyContent(ui)
+        width >= 240.dp -> WideContent(ui)
+        else -> SquareContent(ui)
+    }
+}
+
+@Composable
+private fun SquareContent(ui: Ui) {
     val size = LocalSize.current
     val pad = 10.dp
     val innerWidth = (size.width - pad * 2).value.coerceAtLeast(60f)
@@ -283,6 +317,260 @@ private fun LineBlock(
             )
         }
     }
+}
+
+private class Colors(
+    val background: androidx.glance.unit.ColorProvider,
+    val text: androidx.glance.unit.ColorProvider,
+    val muted: androidx.glance.unit.ColorProvider,
+    val on: androidx.glance.unit.ColorProvider,
+    val off: androidx.glance.unit.ColorProvider,
+    val good: androidx.glance.unit.ColorProvider,
+    val bad: androidx.glance.unit.ColorProvider,
+)
+
+private fun colorsFor(ui: Ui) = Colors(
+    background = ColorProvider(
+        day = Palette.bgLight.copy(alpha = ui.lightAlpha),
+        night = Palette.bgDark.copy(alpha = ui.darkAlpha),
+    ),
+    text = ColorProvider(day = Palette.textLight, night = Palette.textDark),
+    muted = ColorProvider(day = Palette.mutedLight, night = Palette.mutedDark),
+    on = ColorProvider(day = Palette.onLight, night = Palette.onDark),
+    off = ColorProvider(day = Palette.offLight, night = Palette.offDark),
+    good = ColorProvider(day = Palette.goodLight, night = Palette.goodDark),
+    bad = ColorProvider(day = Palette.badLight, night = Palette.badDark),
+)
+
+/** 1x1 and narrow tall widgets: only the state and the current stretch of time. */
+@Composable
+private fun TinyContent(ui: Ui) {
+    val size = LocalSize.current
+    val c = colorsFor(ui)
+    val pad = 6.dp
+    val inner = (size.width - pad * 2).value.coerceAtLeast(30f)
+    val showName = size.height >= 100.dp
+    val statusSize = (inner / 5.2f).coerceIn(9f, 16f)
+    // "06:30" is about 2.9 character widths per point of font size; two of them are stacked.
+    val fitWidth = inner / 3.0f
+    val heightLeft = size.height.value - pad.value * 2 - statusSize * 1.3f - (if (showName) 18f else 0f)
+    val fitHeight = heightLeft / (2 * 1.25f)
+    val timeSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 11f)).coerceIn(11f, 32f).sp
+
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(c.background)
+            .cornerRadius(18.dp)
+            .padding(pad)
+            .clickable(actionStartActivity<MainActivity>(actionParametersOf(PlaceKey to (ui.placeId ?: "")))),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (showName) {
+            Text(
+                text = ui.name,
+                maxLines = 1,
+                style = TextStyle(color = c.text, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+            )
+        }
+        if (ui.statusShort != null) {
+            Text(
+                text = ui.statusShort,
+                maxLines = 1,
+                style = TextStyle(
+                    color = if (ui.statusOn) c.good else c.bad,
+                    fontSize = statusSize.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+        }
+        val first = ui.first
+        if (first != null) {
+            val color = if (first.on) c.on else c.off
+            val style = TextStyle(color = color, fontSize = timeSize, fontWeight = FontWeight.Bold)
+            Text(text = first.from, maxLines = 1, style = style)
+            Text(text = first.to, maxLines = 1, style = style)
+        } else if (ui.message != null) {
+            Text(
+                text = ui.message,
+                maxLines = 2,
+                style = TextStyle(
+                    color = if (ui.messageOn) c.on else c.muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+        }
+    }
+}
+
+/** 4x2 and bigger: the state, the current stretch, and today (and tomorrow) as colored lines. */
+@Composable
+private fun WideContent(ui: Ui) {
+    val size = LocalSize.current
+    val c = colorsFor(ui)
+    val pad = 10.dp
+    val inner = (size.width - pad * 2).value
+    val h = size.height.value
+    val labelWidth = 46f
+    val barWidth = (inner - labelWidth).coerceAtLeast(60f)
+    val thick = if (h >= 170f) 22f else 16f
+    val thin = if (h >= 170f) 14f else 10f
+    val showTomorrow = h >= 125f && ui.bars.size > 1
+    val showHours = h >= 100f && ui.bars.isNotEmpty()
+    val rangeSize = (if (h >= 130f) 22f else 18f) * ui.textScale.coerceIn(0.8f, 1.3f)
+    val showNext = size.width >= 300.dp
+
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(c.background)
+            .cornerRadius(22.dp)
+            .padding(pad)
+            .clickable(actionRunCallback<RefreshAction>()),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = GlanceModifier.clickable(
+                    actionStartActivity<MainActivity>(actionParametersOf(PlaceKey to (ui.placeId ?: ""))),
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    provider = ImageProvider(R.drawable.ic_home),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(18.dp),
+                    colorFilter = ColorFilter.tint(c.muted),
+                )
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                Text(
+                    text = ui.name,
+                    maxLines = 1,
+                    style = TextStyle(color = c.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                )
+            }
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            Text(
+                text = ui.updated,
+                maxLines = 1,
+                style = TextStyle(color = c.muted, fontSize = 10.sp),
+            )
+        }
+        Spacer(modifier = GlanceModifier.height(4.dp))
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (ui.status != null) {
+                Text(
+                    text = ui.status,
+                    maxLines = 1,
+                    style = TextStyle(
+                        color = if (ui.statusOn) c.good else c.bad,
+                        fontSize = (rangeSize * 0.8f).sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+                Spacer(modifier = GlanceModifier.width(10.dp))
+            }
+            val first = ui.first
+            if (first != null) {
+                Text(
+                    text = first.from + "–" + first.to,
+                    maxLines = 1,
+                    style = TextStyle(
+                        color = if (first.on) c.on else c.off,
+                        fontSize = rangeSize.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            } else if (ui.message != null) {
+                Text(
+                    text = ui.message,
+                    maxLines = 1,
+                    style = TextStyle(
+                        color = if (ui.messageOn) c.on else c.muted,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                )
+            }
+            val second = ui.second
+            if (showNext && second != null) {
+                Spacer(modifier = GlanceModifier.defaultWeight())
+                Text(
+                    text = "→ " + second.from + "–" + second.to,
+                    maxLines = 1,
+                    style = TextStyle(color = c.muted, fontSize = 12.sp),
+                )
+            }
+        }
+        Spacer(modifier = GlanceModifier.defaultWeight())
+
+        for ((index, bar) in ui.bars.withIndex()) {
+            if (index == 1 && !showTomorrow) break
+            if (index > 0) Spacer(modifier = GlanceModifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = GlanceModifier.width(labelWidth.dp)) {
+                    Text(
+                        text = bar.label,
+                        maxLines = 1,
+                        style = TextStyle(color = c.muted, fontSize = 9.sp),
+                    )
+                }
+                TimelineBar(bar, barWidth, if (index == 0) thick else thin, c)
+            }
+        }
+        if (showHours) {
+            Spacer(modifier = GlanceModifier.height(2.dp))
+            Row {
+                Spacer(modifier = GlanceModifier.width(labelWidth.dp))
+                for (label in listOf("0", "6", "12", "18")) {
+                    Box(modifier = GlanceModifier.width((barWidth / 4f).dp)) {
+                        Text(text = label, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 9.sp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A day as one line, 48 half-hour slots wide: green = power on, red = off, with a thin marker at the
+ * current time. The segments are laid out as plain colored blocks, so the line scales with the widget.
+ */
+@Composable
+private fun TimelineBar(bar: Bar, totalWidth: Float, height: Float, c: Colors) {
+    val markerWidth = 2f
+    val unit = (totalWidth - markerWidth) / 48f
+    Row(modifier = GlanceModifier.height(height.dp)) {
+        var start = 0
+        for (run in bar.runs) {
+            val end = start + run.slots
+            val color = if (run.on) c.good else c.bad
+            val now = bar.nowSlot
+            if (now != null && now >= start && now < end) {
+                if (now > start) Segment(((now - start) * unit), height, color)
+                Segment(markerWidth, height, c.text)
+                if (end > now) Segment(((end - now) * unit), height, color)
+            } else {
+                Segment(run.slots * unit, height, color)
+            }
+            start = end
+        }
+        // Lines without a marker keep the same width as the one with it.
+        if (bar.nowSlot == null) Segment(markerWidth, height, c.background)
+    }
+}
+
+@Composable
+private fun Segment(width: Float, height: Float, color: androidx.glance.unit.ColorProvider) {
+    Spacer(modifier = GlanceModifier.width(width.dp).height(height.dp).background(color))
 }
 
 /** Tapping the widget body refreshes the data right away. */

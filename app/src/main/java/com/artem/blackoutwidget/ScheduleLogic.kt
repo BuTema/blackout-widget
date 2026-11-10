@@ -57,6 +57,19 @@ object ScheduleLogic {
         return slots
     }
 
+    /** Groups consecutive slots with the same state: (power on?, number of slots), in order. */
+    fun runs(slots: BooleanArray): List<Pair<Boolean, Int>> {
+        val result = ArrayList<Pair<Boolean, Int>>()
+        var i = 0
+        while (i < slots.size) {
+            var j = i
+            while (j < slots.size && slots[j] == slots[i]) j++
+            result.add(slots[i] to (j - i))
+            i = j
+        }
+        return result
+    }
+
     /** Merges consecutive slots (also across midnight, when both days are known) into periods. */
     fun periods(days: Map<LocalDate, Map<Int, String>>): List<Period> {
         val result = ArrayList<Period>()

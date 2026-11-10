@@ -99,4 +99,15 @@ class ScheduleLogicTest {
         assertEquals(WidgetState.NoData, ScheduleLogic.state(mapOf(day("GPV6.2", d5)), at(d4, 12)))
         assertEquals(WidgetState.NoData, ScheduleLogic.state(emptyMap(), LocalDateTime.of(2026, 11, 4, 12, 0)))
     }
+
+    @Test
+    fun runsGroupConsecutiveSlots() {
+        assertEquals(listOf(true to 48), ScheduleLogic.runs(BooleanArray(48) { true }))
+        val slots = BooleanArray(48) { it !in 12..13 && it != 20 }
+        assertEquals(
+            listOf(true to 12, false to 2, true to 6, false to 1, true to 27),
+            ScheduleLogic.runs(slots),
+        )
+        assertTrue(ScheduleLogic.runs(BooleanArray(0)).isEmpty())
+    }
 }
