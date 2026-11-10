@@ -4,12 +4,33 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
+ * A DTEK regional network. Each has its own site with its own street lists and schedules, so the
+ * region matters for an address and for a hand-picked queue alike.
+ */
+enum class DtekRegion(val id: String, val host: String, val defaultCity: String) {
+    ODESA("oem", "www.dtek-oem.com.ua", "м. Одеса"),
+    KYIV_REGION("krem", "www.dtek-krem.com.ua", ""),
+    DNIPRO("dnem", "www.dtek-dnem.com.ua", "м. Дніпро"),
+    KYIV("kem", "www.dtek-kem.com.ua", "м. Київ"),
+    ;
+
+    val shutdownsUrl: String get() = "https://$host/ua/shutdowns"
+
+    companion object {
+        /** Unknown ids (and places saved before regions existed) are Odesa. */
+        fun byId(id: String?): DtekRegion = entries.firstOrNull { it.id == id } ?: ODESA
+    }
+}
+
+/**
  * One place the person wants a schedule for: "Дім", "Мама", "Дача"...
  * It is found either by address or by a hand-picked queue (exactly one of the two is in use).
  */
 data class Place(
     val id: String,
     val name: String = "",
+    /** [DtekRegion.id] of the DTEK network that serves the place. */
+    val regionId: String = DtekRegion.ODESA.id,
     val city: String = "м. Одеса",
     val street: String = "",
     val house: String = "",
@@ -22,6 +43,8 @@ data class Place(
     /** Whether the notification options (changes, reminders) apply to this place. */
     val notify: Boolean = true,
 ) {
+    val region: DtekRegion get() = DtekRegion.byId(regionId)
+
     /** The address is the source and it is filled in, so DTEK is asked for the queue on every refresh. */
     val usesAddress: Boolean
         get() = !byGroup && street.isNotBlank() && house.isNotBlank()
@@ -48,6 +71,7 @@ object PlaceJson {
                 JSONObject()
                     .put("id", p.id)
                     .put("name", p.name)
+                    .put("region", p.regionId)
                     .put("city", p.city)
                     .put("street", p.street)
                     .put("house", p.house)
@@ -72,6 +96,7 @@ object PlaceJson {
                 Place(
                     id = id,
                     name = o.optString("name", d.name),
+                    regionId = o.optString("region", d.regionId),
                     city = o.optString("city", d.city),
                     street = o.optString("street", d.street),
                     house = o.optString("house", d.house),

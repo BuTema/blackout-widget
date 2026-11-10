@@ -10,10 +10,17 @@ class PlaceJsonTest {
     @Test
     fun roundTrip() {
         val places = listOf(
-            Place("main", "Дім", "м. Одеса", "пров. 5-й Травневий", "9", false, "", "GPV6.2", true),
-            Place("p2", "Мама", byGroup = true, manualGroup = "GPV1.1", notify = false),
+            Place("main", "Дім", "oem", "м. Одеса", "пров. 5-й Травневий", "9", false, "", "GPV6.2", true),
+            Place("p2", "Мама", "krem", byGroup = true, manualGroup = "GPV1.1", notify = false),
         )
         assertEquals(places, PlaceJson.fromJson(PlaceJson.toJson(places)))
+    }
+
+    @Test
+    fun regionDefaultsToOdesaAndUnknownIdsToo() {
+        assertEquals(DtekRegion.ODESA, PlaceJson.fromJson("""[{"id":"x"}]""").single().region)
+        assertEquals(DtekRegion.ODESA, DtekRegion.byId("nope"))
+        assertEquals(DtekRegion.KYIV_REGION, Place("a", regionId = "krem").region)
     }
 
     @Test

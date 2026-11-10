@@ -126,4 +126,9 @@
     <string name="widget_for_place">Додати віджет цього місця</string>
     <string name="state_on_short">Є світло</string>
     <string name="state_off_short">Вимкнено</string>
+    <string name="region_title">Область (мережа ДТЕК)</string>
+    <string name="region_odesa">Одеська обл.</string>
+    <string name="region_kyiv_region">Київська обл.</string>
+    <string name="region_dnipro">Дніпро / Дніпровщина</string>
+    <string name="region_kyiv">м. Київ</string>
 </resources>

@@ -44,15 +44,15 @@ class DtekClient(context: Context) {
      * Loads the page once and reads the schedule of every queue. [lookups] are (city, street) pairs whose
      * house lists are fetched too, from the same page; a pair with a blank part is skipped (null answer).
      */
-    suspend fun fetch(lookups: List<Pair<String, String>>): Raw {
+    suspend fun fetch(region: DtekRegion, lookups: List<Pair<String, String>>): Raw {
         val raw = withContext(Dispatchers.Main) {
-            withTimeoutOrNull(TIMEOUT_MS) { loadInWebView(lookups) }
+            withTimeoutOrNull(TIMEOUT_MS) { loadInWebView(region, lookups) }
         }
         return raw ?: throw DtekException("Timed out while loading the DTEK page")
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private suspend fun loadInWebView(lookups: List<Pair<String, String>>): Raw =
+    private suspend fun loadInWebView(region: DtekRegion, lookups: List<Pair<String, String>>): Raw =
         suspendCancellableCoroutine { cont ->
             val handler = Handler(Looper.getMainLooper())
             val web = WebView(appContext)
@@ -139,7 +139,7 @@ class DtekClient(context: Context) {
                 handler.post { finish(Result.failure(DtekException("Cancelled"))) }
             }
 
-            web.loadUrl(PAGE_URL)
+            web.loadUrl(region.shutdownsUrl)
         }
 
     private fun buildScript(lookups: List<Pair<String, String>>): String {
@@ -149,7 +149,6 @@ class DtekClient(context: Context) {
     }
 
     private companion object {
-        const val PAGE_URL = "https://www.dtek-oem.com.ua/ua/shutdowns"
         const val TIMEOUT_MS = 90_000L
         const val MAX_ATTEMPTS = 45
 

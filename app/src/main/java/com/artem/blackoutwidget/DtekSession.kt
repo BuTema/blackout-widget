@@ -35,7 +35,7 @@ class DtekSessionBridge(private val onReply: (String, Boolean, String) -> Unit) 
  *
  * Create it on the main thread, call [post] from any coroutine, and [close] it when done.
  */
-class DtekSession(context: Context) {
+class DtekSession(context: Context, private val region: DtekRegion) {
     private val appContext = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
 
@@ -133,7 +133,7 @@ class DtekSession(context: Context) {
                 }
             }
         }
-        w.loadUrl(PAGE_URL)
+        w.loadUrl(region.shutdownsUrl)
     }
 
     private suspend fun call(method: String, fields: List<Pair<String, String>>): String =
@@ -169,7 +169,6 @@ class DtekSession(context: Context) {
     }
 
     private companion object {
-        const val PAGE_URL = "https://www.dtek-oem.com.ua/ua/shutdowns"
         const val CALL_TIMEOUT_MS = 60_000L
         const val MAX_ATTEMPTS = 45
 

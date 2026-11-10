@@ -1,5 +1,6 @@
 package com.artem.blackoutwidget
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -20,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +59,10 @@ fun PlaceEditorScreen(
     var byGroup by rememberSaveable(placeId) { mutableStateOf(initial.byGroup) }
     var group by rememberSaveable(placeId) { mutableStateOf(initial.manualGroup) }
     var notify by rememberSaveable(placeId) { mutableStateOf(initial.notify) }
+    var regionId by rememberSaveable(placeId) { mutableStateOf(initial.regionId) }
+    val region = DtekRegion.byId(regionId)
+    // Switching region starts the address over: streets and queues belong to one DTEK network.
+    val sameRegion = regionId == initial.regionId
     var addressCheck by remember(placeId) { mutableStateOf<AddressCheck?>(null) }
     var detected by remember(placeId) { mutableStateOf(initial.detectedGroup) }
     var stored by remember(placeId) { mutableStateOf(existing != null) }
@@ -65,8 +72,8 @@ fun PlaceEditorScreen(
     var askDelete by remember { mutableStateOf(false) }
 
     // One hidden DTEK page shared by all address lookups while this screen is open.
-    val session = remember { DtekSession(ctx) }
-    DisposableEffect(Unit) { onDispose { session.close() } }
+    val session = remember(regionId) { DtekSession(ctx, region) }
+    DisposableEffect(session) { onDispose { session.close() } }
 
     /** The place as it will be stored: DTEK's spelling when the address was checked, the old one otherwise. */
     fun current(): Place {
@@ -74,12 +81,13 @@ fun PlaceEditorScreen(
         val checked = if (!byGroup && c != null && c.canSave) c else null
         return initial.copy(
             name = name.trim(),
-            city = checked?.city ?: initial.city,
-            street = checked?.street ?: initial.street,
-            house = checked?.house ?: initial.house,
+            regionId = regionId,
+            city = checked?.city ?: if (sameRegion) initial.city else region.defaultCity,
+            street = checked?.street ?: if (sameRegion) initial.street else "",
+            house = checked?.house ?: if (sameRegion) initial.house else "",
             byGroup = byGroup,
             manualGroup = group,
-            detectedGroup = if (checked != null) checked.group.orEmpty() else detected,
+            detectedGroup = if (checked != null) checked.group.orEmpty() else if (sameRegion) detected else "",
             notify = notify,
         )
     }
@@ -132,6 +140,24 @@ fun PlaceEditorScreen(
             SwitchRow(stringResource(R.string.place_notify), notify) { notify = it }
         }
 
+        SectionCard(stringResource(R.string.region_title)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (r in DtekRegion.entries) {
+                    FilterChip(
+                        selected = r == region,
+                        onClick = {
+                            regionId = r.id
+                            addressCheck = null
+                        },
+                        label = { Text(regionName(r)) },
+                    )
+                }
+            }
+        }
+
         SectionCard(stringResource(R.string.settings_source)) {
             RadioRow(
                 title = stringResource(R.string.source_address),
@@ -149,14 +175,17 @@ fun PlaceEditorScreen(
             if (byGroup) {
                 GroupPicker(selected = group, onSelect = { group = it })
             } else {
-                AddressPicker(
-                    session = session,
-                    initialCity = initial.city,
-                    initialStreet = initial.street,
-                    initialHouse = initial.house,
-                    initialGroup = initial.detectedGroup,
-                    onCheck = { addressCheck = it },
-                )
+                key(regionId) {
+                    AddressPicker(
+                        session = session,
+                        region = region,
+                        initialCity = if (sameRegion) initial.city else region.defaultCity,
+                        initialStreet = if (sameRegion) initial.street else "",
+                        initialHouse = if (sameRegion) initial.house else "",
+                        initialGroup = if (sameRegion) initial.detectedGroup else "",
+                        onCheck = { addressCheck = it },
+                    )
+                }
             }
 
             Button(
@@ -262,3 +291,14 @@ fun PlaceEditorScreen(
         )
     }
 }
+
+/** The short name of a DTEK region, as shown on its chip. */
+@Composable
+internal fun regionName(region: DtekRegion): String = stringResource(
+    when (region) {
+        DtekRegion.ODESA -> R.string.region_odesa
+        DtekRegion.KYIV_REGION -> R.string.region_kyiv_region
+        DtekRegion.DNIPRO -> R.string.region_dnipro
+        DtekRegion.KYIV -> R.string.region_kyiv
+    },
+)

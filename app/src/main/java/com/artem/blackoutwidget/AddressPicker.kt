@@ -41,6 +41,7 @@ private const val HOUSE_SUGGESTIONS = 12
 @Composable
 fun AddressPicker(
     session: DtekSession,
+    region: DtekRegion,
     initialCity: String,
     initialStreet: String,
     initialHouse: String,
@@ -51,7 +52,7 @@ fun AddressPicker(
     var city by remember { mutableStateOf(initialCity) }
     var street by remember { mutableStateOf(initialStreet) }
     var house by remember { mutableStateOf(initialHouse) }
-    var directory by remember { mutableStateOf(AddressDirectory.cached()) }
+    var directory by remember { mutableStateOf(AddressDirectory.cached(region)) }
     var directoryFailed by remember { mutableStateOf(false) }
     var lookup by remember { mutableStateOf<HouseLookup>(HouseLookup.Idle) }
     // DTEK is only contacted once the person touches a field, so opening settings stays quiet.
@@ -66,13 +67,13 @@ fun AddressPicker(
 
     // The street list: the saved copy at once, a fresh one from DTEK when it is missing or old.
     LaunchedEffect(Unit) {
-        if (directory == null) directory = AddressDirectory.load(ctx)
+        if (directory == null) directory = AddressDirectory.load(ctx, region)
     }
     LaunchedEffect(needNetwork) {
         if (!needNetwork) return@LaunchedEffect
-        if (directory != null && !AddressDirectory.isStale(ctx)) return@LaunchedEffect
+        if (directory != null && !AddressDirectory.isStale(ctx, region)) return@LaunchedEffect
         try {
-            directory = AddressDirectory.refresh(ctx, session)
+            directory = AddressDirectory.refresh(ctx, region, session)
             directoryFailed = false
         } catch (e: CancellationException) {
             throw e

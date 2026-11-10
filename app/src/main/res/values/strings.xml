@@ -126,4 +126,9 @@
     <string name="widget_for_place">Add a widget for this place</string>
     <string name="state_on_short">Power on</string>
     <string name="state_off_short">Power off</string>
+    <string name="region_title">Region (DTEK network)</string>
+    <string name="region_odesa">Odesa region</string>
+    <string name="region_kyiv_region">Kyiv region</string>
+    <string name="region_dnipro">Dnipro region</string>
+    <string name="region_kyiv">Kyiv city</string>
 </resources>

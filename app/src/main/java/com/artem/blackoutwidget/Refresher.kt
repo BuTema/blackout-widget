@@ -46,22 +46,31 @@ object Refresher {
         }
         if (ready.isEmpty()) return
 
-        // One page load serves every place: the schedule holds all queues, and the house lookups of
-        // the places that are found by address are made from the same page.
-        val lookups = ready.map { if (it.usesAddress) it.city to it.street else "" to "" }
-        val raw = DtekClient(ctx).fetch(lookups)
-
-        for ((index, place) in ready.withIndex()) {
-            val previous = Prefs.loadCache(ctx, place.id)
+        // One page load per DTEK region serves all its places: the schedule holds every queue, and the
+        // house lookups of the places found by address are made from the same page.
+        for ((region, inRegion) in ready.groupBy { it.region }) {
             try {
-                val fresh = buildCache(ctx, place, raw, raw.homes.getOrNull(index), now)
-                Prefs.saveCache(ctx, place.id, fresh)
-                Prefs.saveStatus(ctx, place.id, now, null)
-                afterSuccess(ctx, place, previous, fresh)
+                val lookups = inRegion.map { if (it.usesAddress) it.city to it.street else "" to "" }
+                val raw = DtekClient(ctx).fetch(region, lookups)
+                for ((index, place) in inRegion.withIndex()) {
+                    val previous = Prefs.loadCache(ctx, place.id)
+                    try {
+                        val fresh = buildCache(ctx, place, raw, raw.homes.getOrNull(index), now)
+                        Prefs.saveCache(ctx, place.id, fresh)
+                        Prefs.saveStatus(ctx, place.id, now, null)
+                        afterSuccess(ctx, place, previous, fresh)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Prefs.saveStatus(ctx, place.id, now, e.message ?: e.javaClass.simpleName)
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Prefs.saveStatus(ctx, place.id, now, e.message ?: e.javaClass.simpleName)
+                // This region could not be loaded; keep its cached schedules and try the others.
+                val message = e.message ?: e.javaClass.simpleName
+                for (place in inRegion) Prefs.saveStatus(ctx, place.id, now, message)
             }
         }
     }

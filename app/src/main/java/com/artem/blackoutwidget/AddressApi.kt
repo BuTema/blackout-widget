@@ -112,42 +112,49 @@ object Suggest {
     }
 }
 
-/** The region's city -> streets list, downloaded once from DTEK and kept on disk. */
+/** A DTEK region's city -> streets list, downloaded once from DTEK and kept on disk. */
 object AddressDirectory {
-    private const val FILE = "dtek_streets.json"
     private const val MAX_AGE_MS = 14L * 24 * 60 * 60 * 1000
 
-    @Volatile
-    private var memory: Map<String, List<String>>? = null
+    private val memory = HashMap<String, Map<String, List<String>>>()
 
-    fun cached(): Map<String, List<String>>? = memory
+    private fun file(ctx: Context, region: DtekRegion) =
+        File(ctx.applicationContext.filesDir, "dtek_streets_${region.id}.json")
+
+    @Synchronized
+    fun cached(region: DtekRegion): Map<String, List<String>>? = memory[region.id]
 
     /** Reads the saved copy, if any. */
-    suspend fun load(ctx: Context): Map<String, List<String>>? = withContext(Dispatchers.Default) {
-        val inMemory = memory
-        if (inMemory != null) return@withContext inMemory
-        val file = File(ctx.applicationContext.filesDir, FILE)
-        if (!file.exists()) return@withContext null
-        try {
-            val parsed = AddressParsing.parseStreets(file.readText())
-            if (parsed.isEmpty()) null else parsed.also { memory = it }
-        } catch (e: Exception) {
-            null
+    suspend fun load(ctx: Context, region: DtekRegion): Map<String, List<String>>? =
+        withContext(Dispatchers.Default) {
+            cached(region)?.let { return@withContext it }
+            val file = file(ctx, region)
+            if (!file.exists()) return@withContext null
+            try {
+                val parsed = AddressParsing.parseStreets(file.readText())
+                if (parsed.isEmpty()) {
+                    null
+                } else {
+                    synchronized(this@AddressDirectory) { memory[region.id] = parsed }
+                    parsed
+                }
+            } catch (e: Exception) {
+                null
+            }
         }
-    }
 
-    fun isStale(ctx: Context): Boolean {
-        val file = File(ctx.applicationContext.filesDir, FILE)
+    fun isStale(ctx: Context, region: DtekRegion): Boolean {
+        val file = file(ctx, region)
         return !file.exists() || System.currentTimeMillis() - file.lastModified() > MAX_AGE_MS
     }
 
     /** Downloads the list. Throws when DTEK's answer is not a usable street list. */
-    suspend fun refresh(ctx: Context, session: DtekSession): Map<String, List<String>> {
+    suspend fun refresh(ctx: Context, region: DtekRegion, session: DtekSession): Map<String, List<String>> {
         val text = session.post("getStreets", emptyList())
         val parsed = withContext(Dispatchers.Default) { AddressParsing.parseStreets(text) }
         if (parsed.isEmpty()) throw DtekException("Unexpected street list from DTEK: " + text.take(120))
-        withContext(Dispatchers.IO) { File(ctx.applicationContext.filesDir, FILE).writeText(text) }
-        memory = parsed
+        withContext(Dispatchers.IO) { file(ctx, region).writeText(text) }
+        synchronized(this) { memory[region.id] = parsed }
         return parsed
     }
 }
