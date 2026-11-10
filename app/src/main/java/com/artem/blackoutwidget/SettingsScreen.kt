@@ -51,13 +51,12 @@ import kotlinx.coroutines.launch
 
 internal val ALL_GROUPS = (1..6).flatMap { major -> (1..2).map { minor -> "GPV$major.$minor" } }
 
-/** App settings: the list of places, notifications and the look of the widget. */
+/** App settings: notifications and the look of the widget. (Places live on the home screen.) */
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onEditPlace: (String) -> Unit, onAddPlace: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val initial = remember { Prefs.load(ctx) }
-    val places = remember { Prefs.places(ctx) }
 
     var darkAlpha by remember { mutableStateOf(initial.darkAlpha) }
     var lightAlpha by remember { mutableStateOf(initial.lightAlpha) }
@@ -124,43 +123,6 @@ fun SettingsScreen(onBack: () -> Unit, onEditPlace: (String) -> Unit, onAddPlace
             TextButton(onClick = onBack) { Text("‹ " + stringResource(R.string.back)) }
         }
         Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium)
-
-        // ---- Places ----
-        SectionCard(stringResource(R.string.places_title)) {
-            if (places.isEmpty()) {
-                Text(
-                    stringResource(R.string.places_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            for (place in places) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onEditPlace(place.id) }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            place.name.ifBlank { stringResource(R.string.default_home_name) },
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            placeSubtitle(place),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text("›", style = MaterialTheme.typography.headlineSmall)
-                }
-            }
-            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onAddPlace) {
-                Text("+ " + stringResource(R.string.add_place))
-            }
-        }
 
         // ---- Notifications ----
         SectionCard(stringResource(R.string.notifications)) {

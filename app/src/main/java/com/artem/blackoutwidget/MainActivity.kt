@@ -74,62 +74,69 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private const val SCREEN_SCHEDULE = "schedule"
+private const val SCREEN_HOME = "home"
+private const val SCREEN_DETAIL = "detail"
 private const val SCREEN_SETTINGS = "settings"
 private const val SCREEN_EDIT = "edit"
 
 @Composable
 private fun AppRoot(requested: String?, onRequestHandled: () -> Unit) {
     val ctx = LocalContext.current
-    // First launch (no place yet) opens the editor; afterwards the schedule is the home screen.
-    var screen by rememberSaveable {
-        mutableStateOf(if (Prefs.places(ctx).isEmpty()) SCREEN_EDIT else SCREEN_SCHEDULE)
-    }
-    var editId by rememberSaveable {
-        mutableStateOf(if (Prefs.places(ctx).isEmpty()) PlaceJson.newId(emptyList()) else "")
-    }
+    // First launch (no place yet) opens the editor; afterwards the list of places is the home screen.
+    val firstRun = remember { Prefs.places(ctx).isEmpty() }
+    var screen by rememberSaveable { mutableStateOf(if (firstRun) SCREEN_EDIT else SCREEN_HOME) }
+    var editId by rememberSaveable { mutableStateOf(if (firstRun) PlaceJson.newId(emptyList()) else "") }
+    // Where the editor returns to: the place's detail screen or the home screen.
+    var editReturn by rememberSaveable { mutableStateOf(SCREEN_HOME) }
     var selectedId by rememberSaveable { mutableStateOf(Prefs.places(ctx).firstOrNull()?.id ?: "") }
 
     LaunchedEffect(requested) {
         if (requested != null) {
             if (Prefs.place(ctx, requested) != null) {
                 selectedId = requested
-                screen = SCREEN_SCHEDULE
+                screen = SCREEN_DETAIL
             }
             onRequestHandled()
         }
     }
 
-    BackHandler(enabled = screen != SCREEN_SCHEDULE) {
-        screen = if (screen == SCREEN_EDIT) SCREEN_SETTINGS else SCREEN_SCHEDULE
+    BackHandler(enabled = screen != SCREEN_HOME) {
+        screen = when (screen) {
+            SCREEN_EDIT -> editReturn
+            else -> SCREEN_HOME
+        }
     }
 
     when (screen) {
         SCREEN_EDIT -> PlaceEditorScreen(
             placeId = editId,
-            onBack = { screen = SCREEN_SETTINGS },
-            onSaved = {
-                selectedId = it
-            },
+            onBack = { screen = editReturn },
+            onSaved = { selectedId = it },
             onDeleted = {
                 if (selectedId == it) selectedId = Prefs.places(ctx).firstOrNull()?.id ?: ""
-                screen = SCREEN_SETTINGS
+                screen = SCREEN_HOME
             },
         )
-        SCREEN_SETTINGS -> SettingsScreen(
-            onBack = { screen = SCREEN_SCHEDULE },
-            onEditPlace = {
-                editId = it
+        SCREEN_SETTINGS -> SettingsScreen(onBack = { screen = SCREEN_HOME })
+        SCREEN_DETAIL -> ScheduleScreen(
+            placeId = selectedId,
+            onBack = { screen = SCREEN_HOME },
+            onEdit = {
+                editId = selectedId
+                editReturn = SCREEN_DETAIL
                 screen = SCREEN_EDIT
+            },
+        )
+        else -> HomeScreen(
+            onOpenPlace = {
+                selectedId = it
+                screen = SCREEN_DETAIL
             },
             onAddPlace = {
                 editId = PlaceJson.newId(Prefs.places(ctx).map { p -> p.id })
+                editReturn = SCREEN_HOME
                 screen = SCREEN_EDIT
             },
-        )
-        else -> ScheduleScreen(
-            placeId = selectedId,
-            onSelectPlace = { selectedId = it },
             onOpenSettings = { screen = SCREEN_SETTINGS },
         )
     }

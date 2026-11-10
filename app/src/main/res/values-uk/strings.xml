@@ -132,4 +132,9 @@
     <string name="region_dnipro">Дніпро / Дніпровщина</string>
     <string name="region_kyiv">м. Київ</string>
     <string name="widget_choose_place">Торкніться, щоб обрати місце</string>
+    <string name="edit">Редагувати</string>
+    <string name="home_title">Графіки світла</string>
+    <string name="home_next">Далі: %1$s</string>
+    <string name="home_all_day_on">Світло є весь день</string>
+    <string name="home_drag_hint">Утримайте картку й перетягніть, щоб змінити порядок</string>
 </resources>

@@ -114,6 +114,15 @@ object Prefs {
         sp(ctx).edit().putString("places", PlaceJson.toJson(list)).apply()
     }
 
+    /** Stores the places in the order of [ids]; places missing from [ids] keep their relative order at the end. */
+    @Synchronized
+    fun reorderPlaces(ctx: Context, ids: List<String>) {
+        val current = places(ctx)
+        val byId = current.associateBy { it.id }
+        val ordered = ids.mapNotNull { byId[it] } + current.filter { it.id !in ids }
+        sp(ctx).edit().putString("places", PlaceJson.toJson(ordered)).apply()
+    }
+
     /** Removes the place together with its stored schedule and every widget that showed it. */
     @Synchronized
     fun deletePlace(ctx: Context, id: String) {

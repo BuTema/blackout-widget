@@ -60,9 +60,9 @@ private val CellOff = Color(0xFFD94848)
 private fun textOn(dark: Boolean) = if (dark) Color(0xFF6FE08A) else Color(0xFF1B8A3A)
 private fun textOff(dark: Boolean) = if (dark) Color(0xFFFF7A6E) else Color(0xFFC62828)
 
-/** Home screen: today / tomorrow, the 24-hour grid (two rows of 12) and the list of periods. */
+/** One place in detail: today / tomorrow, the 24-hour grid (two rows of 12) and the list of periods. */
 @Composable
-fun ScheduleScreen(placeId: String, onSelectPlace: (String) -> Unit, onOpenSettings: () -> Unit) {
+fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val dark = isSystemInDarkTheme()
@@ -116,6 +116,11 @@ fun ScheduleScreen(placeId: String, onSelectPlace: (String) -> Unit, onOpenSetti
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack) { Text("‹ " + stringResource(R.string.back)) }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onEdit) { Text(stringResource(R.string.edit)) }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 if (widgetState is WidgetState.Periods && widgetState.next != null) {
@@ -138,28 +143,12 @@ fun ScheduleScreen(placeId: String, onSelectPlace: (String) -> Unit, onOpenSetti
                     }
                 }
             }
-            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.settings)) }
-        }
-
-        if (places.size > 1) {
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                for (p in places) {
-                    FilterChip(
-                        selected = p.id == shownId,
-                        onClick = { onSelectPlace(p.id) },
-                        label = { Text(p.name.ifBlank { stringResource(R.string.default_home_name) }) },
-                    )
-                }
-            }
         }
 
         if (cache == null) {
             Text(stringResource(R.string.empty_hint), style = MaterialTheme.typography.bodyLarge)
-            Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.settings))
+            Button(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.edit))
             }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

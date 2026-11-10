@@ -132,4 +132,9 @@
     <string name="region_dnipro">Dnipro region</string>
     <string name="region_kyiv">Kyiv city</string>
     <string name="widget_choose_place">Tap to choose a place</string>
+    <string name="edit">Edit</string>
+    <string name="home_title">Power schedules</string>
+    <string name="home_next">Next: %1$s</string>
+    <string name="home_all_day_on">Power is on all day</string>
+    <string name="home_drag_hint">Press and hold a card, then drag to reorder</string>
 </resources>
