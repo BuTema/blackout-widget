@@ -131,4 +131,5 @@
     <string name="region_kyiv_region">Київська обл.</string>
     <string name="region_dnipro">Дніпро / Дніпровщина</string>
     <string name="region_kyiv">м. Київ</string>
+    <string name="widget_choose_place">Торкніться, щоб обрати місце</string>
 </resources>

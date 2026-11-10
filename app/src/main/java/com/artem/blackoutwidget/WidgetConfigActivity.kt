@@ -25,6 +25,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Opens when a widget is added (and when it is reconfigured): asks which place the widget shows.
@@ -86,6 +90,10 @@ class WidgetConfigActivity : ComponentActivity() {
         Scheduler.ensure(this)
         Scheduler.refreshNow(this)
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
-        finish()
+        // Repaint right away: this also runs when a widget without a place asks to be given one.
+        CoroutineScope(Dispatchers.Main).launch {
+            ScheduleWidget().updateAll(applicationContext)
+            finish()
+        }
     }
 }

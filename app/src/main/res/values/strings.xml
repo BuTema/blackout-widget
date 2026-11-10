@@ -131,4 +131,5 @@
     <string name="region_kyiv_region">Kyiv region</string>
     <string name="region_dnipro">Dnipro region</string>
     <string name="region_kyiv">Kyiv city</string>
+    <string name="widget_choose_place">Tap to choose a place</string>
 </resources>

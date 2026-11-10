@@ -162,7 +162,21 @@ object Prefs {
     }
 
     fun forgetWidget(ctx: Context, appWidgetId: Int) {
-        sp(ctx).edit().remove("widget_$appWidgetId").apply()
+        sp(ctx).edit().remove("widget_$appWidgetId").remove("tomorrow_$appWidgetId").apply()
+    }
+
+    /** Whether this widget currently shows tomorrow instead of today (the choice lasts until midnight). */
+    fun isTomorrowShown(ctx: Context, appWidgetId: Int, today: java.time.LocalDate): Boolean =
+        sp(ctx).getString("tomorrow_$appWidgetId", null) == today.toString()
+
+    fun toggleTomorrow(ctx: Context, appWidgetId: Int, today: java.time.LocalDate) {
+        val edit = sp(ctx).edit()
+        if (isTomorrowShown(ctx, appWidgetId, today)) {
+            edit.remove("tomorrow_$appWidgetId")
+        } else {
+            edit.putString("tomorrow_$appWidgetId", today.toString())
+        }
+        edit.apply()
     }
 
     /** The place of a widget; widgets from before several places existed show the first one. */
