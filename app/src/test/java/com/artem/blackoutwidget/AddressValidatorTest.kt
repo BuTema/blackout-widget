@@ -53,9 +53,11 @@ class AddressValidatorTest {
     @Test
     fun unknownHouseAndHouseWithoutGroup() {
         assertEquals(AddressState.HOUSE_UNKNOWN, check(house = "77").state)
-        val noGroup = check(house = "5")
-        assertEquals(AddressState.NO_GROUP, noGroup.state)
-        assertFalse(noGroup.canSave)
+        // House 5 has an emergency outage and no group: it can be saved, the group is found later.
+        val outage = check(house = "5")
+        assertEquals(AddressState.EMERGENCY_NO_GROUP, outage.state)
+        assertTrue(outage.canSave)
+        // No group and no outage: an error (see EmergencyHousesTest).
     }
 
     @Test
