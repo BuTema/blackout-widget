@@ -96,7 +96,7 @@
     <string name="addr_hint">Start typing a street - we will suggest options from the DTEK database</string>
     <string name="addr_city_not_found">This place is not in the DTEK database. Pick one from the list</string>
     <string name="addr_street_not_found">This street is not in the DTEK database. Pick one from the list</string>
-    <string name="addr_house_not_found">No such house number on this street. Pick one from the list</string>
+    <string name="addr_house_not_found">DTEK has no schedule for this house number (outside emergency outages). Pick one from the list</string>
     <string name="addr_no_group">DTEK names no queue for this house. Pick the queue by hand</string>
     <string name="addr_checking">Checking the address…</string>
     <string name="addr_found">✓ Address found · queue %1$s</string>
@@ -132,4 +132,6 @@
     <string name="emergency_reason">Reason: %1$s</string>
     <string name="addr_emergency_no_group">An emergency outage is on at this house, so DTEK names no queue now. The address is saved; the schedule appears once the outage ends</string>
     <string name="emergency_no_group">DTEK has no queue for this house during the outage, so only the emergency outage is shown, not a planned schedule</string>
+    <string name="addr_street_group">The houses of this street that DTEK lists have queue %1$s. Yours may differ</string>
+    <string name="addr_use_group">Use queue %1$s</string>
 </resources>

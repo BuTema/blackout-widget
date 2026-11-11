@@ -184,6 +184,7 @@ fun PlaceEditorScreen(
                         initialHouse = if (sameRegion) initial.house else "",
                         initialGroup = if (sameRegion) initial.detectedGroup else "",
                         onCheck = { addressCheck = it },
+                        onUseGroup = { group = it; byGroup = true },
                     )
                 }
             }

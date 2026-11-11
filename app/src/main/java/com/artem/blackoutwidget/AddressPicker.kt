@@ -14,6 +14,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +48,7 @@ fun AddressPicker(
     initialHouse: String,
     initialGroup: String,
     onCheck: (AddressCheck) -> Unit,
+    onUseGroup: (String) -> Unit,
 ) {
     val ctx = LocalContext.current
     var city by remember { mutableStateOf(initialCity) }
@@ -152,12 +154,12 @@ fun AddressPicker(
             onFocus = { interacted = true },
             imeAction = ImeAction.Done,
         )
-        StatusLine(check)
+        StatusLine(check, onUseGroup)
     }
 }
 
 @Composable
-private fun StatusLine(check: AddressCheck) {
+private fun StatusLine(check: AddressCheck, onUseGroup: (String) -> Unit) {
     val group = check.group?.removePrefix("GPV").orEmpty()
     val error = MaterialTheme.colorScheme.error
     val good = MaterialTheme.colorScheme.primary
@@ -174,12 +176,25 @@ private fun StatusLine(check: AddressCheck) {
         AddressState.SAVED -> stringResource(R.string.addr_saved, group) to good
         AddressState.UNVERIFIED -> stringResource(R.string.addr_unverified) to muted
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (check.state == AddressState.CHECKING) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(8.dp))
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (check.state == AddressState.CHECKING) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(text, color = color, style = MaterialTheme.typography.bodyMedium)
         }
-        Text(text, color = color, style = MaterialTheme.typography.bodyMedium)
+        val suggested = check.suggestedGroup?.removePrefix("GPV")
+        if (suggested != null) {
+            Text(
+                stringResource(R.string.addr_street_group, suggested),
+                style = MaterialTheme.typography.bodySmall,
+                color = muted,
+            )
+            TextButton(onClick = { onUseGroup(suggested) }) {
+                Text(stringResource(R.string.addr_use_group, suggested))
+            }
+        }
     }
 }
 

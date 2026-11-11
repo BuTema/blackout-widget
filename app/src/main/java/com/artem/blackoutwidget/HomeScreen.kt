@@ -379,14 +379,14 @@ private fun PillGraph(slots: BooleanArray, emergency: BooleanArray, nowSlot: Int
     Column(modifier = Modifier.padding(top = 4.dp)) {
         Row(modifier = Modifier.fillMaxWidth().height(16.dp)) {
             for (i in 0 until 48) {
-                // Emergency = tallest, in its own colour; on = tall orange; off = short gray; all on the bottom line.
+                // On = tallest (orange), no power = medium (gray), emergency = smallest (red); all on the bottom line.
                 val color = when {
                     i == nowSlot -> nowColor
                     emergency[i] -> urgent
                     slots[i] -> on
                     else -> off
                 }
-                val share = if (emergency[i] || i == nowSlot) 1f else if (slots[i]) 0.8f else 0.5f
+                val share = if (emergency[i]) 0.35f else if (slots[i]) 1f else 0.65f
                 Box(
                     modifier = Modifier
                         .weight(1f)

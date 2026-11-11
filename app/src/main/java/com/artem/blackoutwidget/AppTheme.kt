@@ -17,9 +17,9 @@ object AppColors {
     val grayDark = Color(0xFFB0B0B5)
     val grayLight = Color(0xFF6B6B70)
 
-    // The one exception to the orange-and-gray look: an emergency outage must not be missed.
-    val emergencyDark = Color(0xFF64B5FF)
-    val emergencyLight = Color(0xFF0A6FE0)
+    // The one exception to the orange-and-gray look: an emergency outage is red, so it is not missed.
+    val emergencyDark = Color(0xFFFF5A4F)
+    val emergencyLight = Color(0xFFD32F2F)
 
     fun emergency(dark: Boolean) = if (dark) emergencyDark else emergencyLight
     fun on(dark: Boolean) = if (dark) orangeDark else orangeLight

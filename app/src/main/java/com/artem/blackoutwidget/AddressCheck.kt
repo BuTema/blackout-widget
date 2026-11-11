@@ -28,6 +28,8 @@ data class AddressCheck(
     val street: String,
     val house: String,
     val group: String?,
+    /** The queue most houses of the street have, offered when DTEK has nothing for this house. */
+    val suggestedGroup: String? = null,
 ) {
     val canSave: Boolean
         get() = state == AddressState.FOUND || state == AddressState.EMERGENCY_NO_GROUP ||
@@ -59,6 +61,17 @@ object AddressValidator {
         return canonCity to canonStreet
     }
 
+    /**
+     * The group nearly all of the street's houses that have one share (at least two houses, four in five
+     * of them agreeing), or null. Neighbours usually sit in the same queue, but not always.
+     */
+    fun streetGroup(houses: List<HouseInfo>): String? {
+        val groups = houses.mapNotNull { it.group }
+        if (groups.size < 2) return null
+        val top = groups.groupingBy { it }.eachCount().maxByOrNull { it.value } ?: return null
+        return if (top.value * 5 >= groups.size * 4) top.key else null
+    }
+
     fun check(
         directory: Map<String, List<String>>?,
         lookup: HouseLookup,
@@ -69,8 +82,10 @@ object AddressValidator {
         val c = city.trim()
         val s = street.trim()
         val h = house.trim()
-        fun result(state: AddressState, cc: String = c, ss: String = s, hh: String = h, group: String? = null) =
-            AddressCheck(state, cc, ss, hh, group)
+        fun result(
+            state: AddressState, cc: String = c, ss: String = s, hh: String = h, group: String? = null,
+            suggested: String? = null,
+        ) = AddressCheck(state, cc, ss, hh, group, suggested)
 
         if (directory != null && c.isNotEmpty()) {
             val canonCity = Suggest.exact(directory.keys, c) ?: return result(AddressState.CITY_UNKNOWN)
@@ -98,10 +113,13 @@ object AddressValidator {
                     val wanted = FactParser.normalizeHouse(h)
                     val match = lookup.houses.firstOrNull { FactParser.normalizeHouse(it.number) == wanted }
                     when {
-                        match == null -> result(AddressState.HOUSE_UNKNOWN, canonCity, canonStreet)
+                        match == null -> result(AddressState.HOUSE_UNKNOWN, canonCity, canonStreet, suggested = streetGroup(lookup.houses))
                         match.group == null && match.emergency ->
                             result(AddressState.EMERGENCY_NO_GROUP, canonCity, canonStreet, match.number)
-                        match.group == null -> result(AddressState.NO_GROUP, canonCity, canonStreet, match.number)
+                        match.group == null -> result(
+                            AddressState.NO_GROUP, canonCity, canonStreet, match.number,
+                            suggested = streetGroup(lookup.houses),
+                        )
                         else -> result(AddressState.FOUND, canonCity, canonStreet, match.number, match.group)
                     }
                 }

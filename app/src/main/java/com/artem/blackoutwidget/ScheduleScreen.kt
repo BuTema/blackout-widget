@@ -57,7 +57,7 @@ import java.util.Locale
 // Orange = power on, gray = off, as on the widget. White hour numbers read on both.
 private val CellOn = Color(0xFFE88F00)
 private val CellOff = Color(0xFF6F6F75)
-private val CellUrgent = Color(0xFF2F8FE8)
+private val CellUrgent = Color(0xFFD84B3F)
 
 private fun textOn(dark: Boolean) = AppColors.on(dark)
 private fun textOff(dark: Boolean) = AppColors.off(dark)

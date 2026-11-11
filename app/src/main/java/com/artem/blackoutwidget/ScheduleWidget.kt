@@ -111,8 +111,8 @@ private object Palette {
     val chipLight = Color(0x1F000000)
 
     // An emergency outage: the only colour besides orange and gray.
-    val emergencyDark = Color(0xFF64B5FF)
-    val emergencyLight = Color(0xFF0A6FE0)
+    val emergencyDark = Color(0xFFFF5A4F)
+    val emergencyLight = Color(0xFFD32F2F)
 }
 
 private class Colors(
@@ -825,8 +825,8 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
             Row(modifier = GlanceModifier.defaultWeight()) {
                 for (k in 0 until 8) {
                     val i = group * 8 + k
-                    // Emergency = the tallest pill in its own colour, power on = tall orange, off = short gray;
-                    // the pill of "now" is full height in the text colour. All sit on the bottom line.
+                    // Power on = the tallest (orange), no power = medium (gray), emergency = the smallest (red);
+                    // the pill of "now" is white at the height of its state. All sit on the bottom line.
                     val urgent = day.emergency[i]
                     val color = when {
                         day.nowSlot == i -> c.text
@@ -835,9 +835,9 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
                         else -> c.pillOff
                     }
                     val share = when {
-                        urgent || day.nowSlot == i -> 1f
-                        day.slots[i] -> 0.8f
-                        else -> 0.5f
+                        urgent -> 0.35f
+                        day.slots[i] -> 1f
+                        else -> 0.65f
                     }
                     Box(
                         modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = 0.6.dp),
