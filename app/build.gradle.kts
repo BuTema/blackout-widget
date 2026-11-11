@@ -14,6 +14,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        // Only the two languages the app has; libraries ship strings for dozens of others.
+        resourceConfigurations += listOf("en", "uk")
     }
 
     // A fixed, public "debug" keystore is committed on purpose: every CI build is signed with the
@@ -30,7 +32,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 and resource shrinking make the APK much smaller. The release build is signed with the
+            // same fixed key as the debug one, so either installs over the other.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
         }
     }

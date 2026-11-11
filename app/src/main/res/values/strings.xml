@@ -17,8 +17,6 @@
     <string name="last_data">Last data: %1$s</string>
     <string name="last_error">Last refresh failed: %1$s</string>
 
-    <string name="power_on_now">Power is on</string>
-    <string name="power_off_now">No power</string>
     <string name="power_on_next">Power will be on</string>
     <string name="power_off_next">Power will be off</string>
     <string name="tomorrow_suffix">" (tomorrow)"</string>
@@ -43,8 +41,6 @@
     <string name="tomorrow_hint">You will get a notification as soon as tomorrow’s schedule is published</string>
     <string name="empty_hint">Add a place in settings and press “Save and refresh”</string>
     <string name="duration_fmt">%1$d h %2$02d min</string>
-    <string name="today_suffix">" (today)"</string>
-    <string name="settings_place">Place</string>
 
     <string name="notifications">Notifications</string>
     <string name="notify_changed">Schedule changed</string>
@@ -82,8 +78,6 @@
     <string name="reminder_now_text_unknown">Next change is not known yet</string>
     <string name="minutes_short">%1$d min</string>
     <string name="hours_short">%1$d h</string>
-    <string name="state_on">Power ON</string>
-    <string name="state_off">Power OFF</string>
 
     <string name="field_name">Location name (shown on the widget)</string>
     <string name="field_city">City / village</string>
@@ -113,9 +107,7 @@
     <string name="widget_pick_place">Which place should this widget show?</string>
     <string name="cancel">Cancel</string>
     <string name="text_size">Time size on the widget: %1$d%%</string>
-    <string name="places_title">My places</string>
     <string name="places_empty">No places yet. Add the first one</string>
-    <string name="add_place">Add a place</string>
     <string name="place_new">New place</string>
     <string name="place_not_configured">Not filled in yet</string>
     <string name="place_notify">Notifications for this place</string>
@@ -124,8 +116,6 @@
     <string name="delete_confirm_text">The saved schedule and the widgets of this place will be removed</string>
     <string name="delete">Delete</string>
     <string name="widget_for_place">Add a widget for this place</string>
-    <string name="state_on_short">Power on</string>
-    <string name="state_off_short">Power off</string>
     <string name="region_title">Region (DTEK network)</string>
     <string name="region_odesa">Odesa region</string>
     <string name="region_kyiv_region">Kyiv region</string>

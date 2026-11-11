@@ -17,8 +17,6 @@
     <string name="last_data">Останні дані: %1$s</string>
     <string name="last_error">Останнє оновлення не вдалося: %1$s</string>
 
-    <string name="power_on_now">Світло є</string>
-    <string name="power_off_now">Немає світла</string>
     <string name="power_on_next">Світло буде</string>
     <string name="power_off_next">Світла не буде</string>
     <string name="tomorrow_suffix">" (завтра)"</string>
@@ -43,8 +41,6 @@
     <string name="tomorrow_hint">Щойно графік на завтра з’явиться, ви отримаєте сповіщення</string>
     <string name="empty_hint">Додайте місце в налаштуваннях і натисніть «Зберегти й оновити»</string>
     <string name="duration_fmt">%1$d год %2$02d хв</string>
-    <string name="today_suffix">" (сьогодні)"</string>
-    <string name="settings_place">Місце</string>
 
     <string name="notifications">Сповіщення</string>
     <string name="notify_changed">Графік змінився</string>
@@ -82,8 +78,6 @@
     <string name="reminder_now_text_unknown">Наступну зміну поки невідомо</string>
     <string name="minutes_short">%1$d хв</string>
     <string name="hours_short">%1$d год</string>
-    <string name="state_on">Світло Є</string>
-    <string name="state_off">Світла немає</string>
 
     <string name="field_name">Назва місця (на віджеті)</string>
     <string name="field_city">Місто / селище</string>
@@ -113,9 +107,7 @@
     <string name="widget_pick_place">Яке місце показувати на віджеті?</string>
     <string name="cancel">Скасувати</string>
     <string name="text_size">Розмір часу на віджеті: %1$d%%</string>
-    <string name="places_title">Мої місця</string>
     <string name="places_empty">Місць ще немає. Додайте перше</string>
-    <string name="add_place">Додати місце</string>
     <string name="place_new">Нове місце</string>
     <string name="place_not_configured">Ще не заповнено</string>
     <string name="place_notify">Сповіщення для цього місця</string>
@@ -124,8 +116,6 @@
     <string name="delete_confirm_text">Збережений графік і віджети цього місця буде прибрано</string>
     <string name="delete">Видалити</string>
     <string name="widget_for_place">Додати віджет цього місця</string>
-    <string name="state_on_short">Є світло</string>
-    <string name="state_off_short">Вимкнено</string>
     <string name="region_title">Область (мережа ДТЕК)</string>
     <string name="region_odesa">Одеська обл.</string>
     <string name="region_kyiv_region">Київська обл.</string>

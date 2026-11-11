@@ -33,14 +33,16 @@ jobs:
         run: ./gradlew testDebugUnitTest
         continue-on-error: true
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
+      - name: Build APKs (small release build and a plain debug one)
+        run: ./gradlew assembleRelease assembleDebug
 
-      - name: Upload APK artifact
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: blackout-widget-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: blackout-widget-apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       - name: Publish the APK as the "Latest build" release
@@ -48,7 +50,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp app/build/outputs/apk/debug/*.apk blackout-widget.apk
+          cp app/build/outputs/apk/release/*.apk blackout-widget.apk
+          cp app/build/outputs/apk/debug/*.apk blackout-widget-debug.apk
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest blackout-widget.apk --title "Latest build" --prerelease \
-            --notes "Automatic build of ${GITHUB_SHA::7}"
+          gh release create latest blackout-widget.apk blackout-widget-debug.apk --title "Latest build" --prerelease \
+            --notes "Automatic build of ${GITHUB_SHA::7}. blackout-widget.apk is the small one; blackout-widget-debug.apk is the same app without shrinking, in case something misbehaves."

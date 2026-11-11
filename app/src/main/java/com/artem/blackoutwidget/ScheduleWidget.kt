@@ -64,7 +64,6 @@ private class DayView(
     val nowSlot: Int?,
     /** Index in [lines] of the period that is on now, or -1. */
     val currentIndex: Int,
-    val allDayOn: Boolean,
 )
 
 /** Everything the widget draws, already resolved to strings, so drawing is trivial. */
@@ -241,7 +240,7 @@ class ScheduleWidget : GlanceAppWidget() {
             if (nowSlot != null && nowSlot >= start && nowSlot < end) currentIndex = i
             start = end
         }
-        return DayView(label, lines, slots, nowSlot, currentIndex, runs.size == 1 && runs[0].first)
+        return DayView(label, lines, slots, nowSlot, currentIndex)
     }
 }
 

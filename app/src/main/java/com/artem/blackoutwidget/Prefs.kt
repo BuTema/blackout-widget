@@ -210,10 +210,6 @@ object Prefs {
         edit.apply()
     }
 
-    /** The place of a widget; widgets from before several places existed show the first one. */
-    fun placeForWidget(ctx: Context, appWidgetId: Int): Place? =
-        place(ctx, widgetPlaceId(ctx, appWidgetId)) ?: places(ctx).firstOrNull()
-
     /** "Add widget" pressed in a place's editor: the next widget that is added shows that place. */
     fun setPendingWidgetPlace(ctx: Context, placeId: String?) {
         val edit = sp(ctx).edit()
