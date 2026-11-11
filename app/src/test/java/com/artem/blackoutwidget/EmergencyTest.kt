@@ -66,7 +66,9 @@ class EmergencyTest {
         assertEquals(listOf(false, true, false, false), periods.map { it.emergency })
         // Without the split an emergency and a planned outage next to each other are one period of no power.
         assertEquals(listOf(true, false, true), ScheduleLogic.periods(days).map { it.on })
-        assertFalse(ScheduleLogic.slotsOf(days.getValue(date))[26]) // 13:00-13:30 is still planned off
+        val slots = ScheduleLogic.slotsOf(days.getValue(date))
+        assertFalse(slots[24]) // 12:00-12:30 is still off by the schedule
+        assertTrue(slots[26]) // 13:00-13:30 is on again
     }
 
     @Test
