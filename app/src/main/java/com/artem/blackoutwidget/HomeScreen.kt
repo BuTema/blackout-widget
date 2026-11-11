@@ -1,5 +1,10 @@
 package com.artem.blackoutwidget
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -25,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -39,7 +45,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,30 +64,28 @@ private class PlaceRow(val place: Place, val cache: Cache?, val status: Status)
 private fun loadRows(ctx: android.content.Context): List<PlaceRow> =
     Prefs.places(ctx).map { PlaceRow(it, Prefs.loadCache(ctx, it.id), Prefs.loadStatus(ctx, it.id)) }
 
-private fun List<String>.swapped(a: Int, b: Int): List<String> =
-    toMutableList().also {
-        val t = it[a]
-        it[a] = it[b]
-        it[b] = t
-    }
-
 /**
  * The home screen: every place as a card (current period, next one, the day as 48 pills). Press and
- * hold a card to drag it to another position; tap it for the full schedule; "+" adds a place.
+ * hold a card to pick it up, drag it over the others (they slide out of the way) and let go to drop it
+ * there; tap it for the full schedule; "+" adds a place.
  */
 @Composable
 fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSettings: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
     val spacingPx = with(LocalDensity.current) { 12.dp.toPx() }
 
     var rows by remember { mutableStateOf(loadRows(ctx)) }
     var order by remember { mutableStateOf(rows.map { it.place.id }) }
     var now by remember { mutableStateOf(LocalDateTime.now(ScheduleLogic.ZONE)) }
-    var draggingId by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
     var refreshing by remember { mutableStateOf(false) }
     val heights = remember { mutableStateMapOf<String, Float>() }
+
+    // The card in the hand, how far the finger has moved it, and where it is sliding to after release.
+    var draggingId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var settleTo by remember { mutableStateOf<Int?>(null) }
 
     // Re-read the stored data every few seconds so background updates show up; never mid-drag.
     LaunchedEffect(Unit) {
@@ -92,6 +98,57 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
             }
             n++
             delay(1000)
+        }
+    }
+
+    fun heightOf(index: Int) = heights[order[index]] ?: 0f
+
+    // The position the card in the hand would take if it were dropped now: it counts a neighbour as
+    // passed once the edge of the card in the hand is beyond the neighbour's middle.
+    fun targetFor(start: Int, offset: Float): Int {
+        var target = start
+        if (offset > 0f) {
+            val edge = offset + heightOf(start)
+            var top = heightOf(start) + spacingPx
+            while (target < order.lastIndex && edge > top + heightOf(target + 1) / 2f) {
+                top += heightOf(target + 1) + spacingPx
+                target++
+            }
+        } else if (offset < 0f) {
+            var above = 0f
+            while (target > 0) {
+                above += heightOf(target - 1) + spacingPx
+                if (offset < -(above - heightOf(target - 1) / 2f)) target-- else break
+            }
+        }
+        return target
+    }
+
+    /** How far the card must travel for the card in the hand to end up at [target]. */
+    fun distanceTo(start: Int, target: Int): Float {
+        var sum = 0f
+        if (target > start) for (i in start + 1..target) sum += heightOf(i) + spacingPx
+        if (target < start) for (i in target until start) sum -= heightOf(i) + spacingPx
+        return sum
+    }
+
+    fun drop() {
+        val id = draggingId ?: return
+        val start = order.indexOf(id)
+        if (start < 0 || settleTo != null) return
+        val target = targetFor(start, dragOffset)
+        settleTo = target
+        scope.launch {
+            animate(dragOffset, distanceTo(start, target), animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ ->
+                dragOffset = value
+            }
+            // Order, offsets and "in the hand" change together, so nothing jumps.
+            val moved = order.toMutableList().also { it.add(target, it.removeAt(start)) }
+            order = moved
+            Prefs.reorderPlaces(ctx, moved)
+            draggingId = null
+            dragOffset = 0f
+            settleTo = null
         }
     }
 
@@ -138,58 +195,55 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
             }
 
             val byId = rows.associateBy { it.place.id }
-            for (id in order) {
+            val start = draggingId?.let { order.indexOf(it) } ?: -1
+            val target = if (start >= 0) settleTo ?: targetFor(start, dragOffset) else -1
+            val handHeight = if (start >= 0) heightOf(start) + spacingPx else 0f
+
+            for ((index, id) in order.withIndex()) {
                 val row = byId[id] ?: continue
-                val dragged = draggingId == id
-                PlaceCard(
-                    row = row,
-                    now = now,
-                    dragged = dragged,
-                    modifier = Modifier
-                        .zIndex(if (dragged) 1f else 0f)
-                        .graphicsLayer { translationY = if (dragged) dragOffset else 0f }
-                        .onSizeChanged { heights[id] = it.height.toFloat() }
-                        .pointerInput(id) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = {
-                                    draggingId = id
-                                    dragOffset = 0f
-                                },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    dragOffset += amount.y
-                                    val list = order
-                                    val index = list.indexOf(id)
-                                    if (index >= 0) {
-                                        if (dragOffset > 0 && index < list.lastIndex) {
-                                            val h = (heights[list[index + 1]] ?: 0f) + spacingPx
-                                            if (dragOffset > h / 2) {
-                                                order = list.swapped(index, index + 1)
-                                                dragOffset -= h
-                                            }
-                                        } else if (dragOffset < 0 && index > 0) {
-                                            val h = (heights[list[index - 1]] ?: 0f) + spacingPx
-                                            if (-dragOffset > h / 2) {
-                                                order = list.swapped(index, index - 1)
-                                                dragOffset += h
-                                            }
+                key(id) {
+                    val dragged = draggingId == id
+                    // The cards between the old and the new place of the dragged one slide out of its way.
+                    val shiftTarget = when {
+                        start < 0 || dragged -> 0f
+                        index in start + 1..target -> -handHeight
+                        index in target until start -> handHeight
+                        else -> 0f
+                    }
+                    val slide by animateFloatAsState(shiftTarget, spring(stiffness = Spring.StiffnessMedium), label = "slide")
+                    val lift by animateFloatAsState(if (dragged) 1.04f else 1f, spring(stiffness = Spring.StiffnessMedium), label = "lift")
+                    PlaceCard(
+                        row = row,
+                        now = now,
+                        dragged = dragged,
+                        modifier = Modifier
+                            .zIndex(if (dragged) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = if (dragged) dragOffset else if (start >= 0) slide else 0f
+                                scaleX = lift
+                                scaleY = lift
+                            }
+                            .onSizeChanged { heights[id] = it.height.toFloat() }
+                            .pointerInput(id) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        if (draggingId == null) {
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            dragOffset = 0f
+                                            draggingId = id
                                         }
-                                    }
-                                },
-                                onDragEnd = {
-                                    draggingId = null
-                                    dragOffset = 0f
-                                    Prefs.reorderPlaces(ctx, order)
-                                },
-                                onDragCancel = {
-                                    draggingId = null
-                                    dragOffset = 0f
-                                    Prefs.reorderPlaces(ctx, order)
-                                },
-                            )
-                        }
-                        .clickable { onOpenPlace(id) },
-                )
+                                    },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        if (draggingId == id && settleTo == null) dragOffset += amount.y
+                                    },
+                                    onDragEnd = { if (draggingId == id) drop() },
+                                    onDragCancel = { if (draggingId == id) drop() },
+                                )
+                            }
+                            .clickable { onOpenPlace(id) },
+                    )
+                }
             }
             // Room so the last card can be scrolled clear of the "+" button.
             Spacer(Modifier.height(88.dp))
@@ -216,7 +270,12 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (dragged) 10.dp else 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (dragged) 16.dp else 1.dp),
+        // Picked up: a lighter card with a clear outline.
+        colors = CardDefaults.cardColors(
+            containerColor = if (dragged) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        border = if (dragged) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
