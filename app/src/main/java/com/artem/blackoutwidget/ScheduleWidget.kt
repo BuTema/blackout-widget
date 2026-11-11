@@ -814,10 +814,16 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
                         day.slots[i] -> c.on
                         else -> c.pillOff
                     }
-                    Box(modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = 0.6.dp)) {
+                    // Power on = a full-height pill, power off = a shorter one, so the two read apart at a glance.
+                    val full = day.slots[i] || day.nowSlot == i
+                    Box(
+                        modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = 0.6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Spacer(
                             modifier = GlanceModifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .height((if (full) height else height * 0.55f).dp)
                                 .background(color)
                                 .cornerRadius(3.dp),
                         )

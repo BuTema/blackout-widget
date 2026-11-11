@@ -155,7 +155,6 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
 
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DayBanner(tomorrow = tab == 1, date = date)
                     if (hours == null) {
                         Text(stringResource(R.string.no_schedule_for_day), style = MaterialTheme.typography.bodyLarge)
                         if (tab == 1 && settings.notifyTomorrow) {
@@ -232,8 +231,8 @@ private fun DaySwitch(tab: Int, today: LocalDate, onSelect: (Int) -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         DayTab(stringResource(R.string.tab_today), shortDate(today), tab == 0, Modifier.weight(1f)) { onSelect(0) }
         DayTab(stringResource(R.string.tab_tomorrow), shortDate(today.plusDays(1)), tab == 1, Modifier.weight(1f)) {
@@ -246,53 +245,24 @@ private fun DaySwitch(tab: Int, today: LocalDate, onSelect: (Int) -> Unit) {
 private fun DayTab(title: String, date: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val background = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
     val foreground = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-    Column(
+    Row(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(background)
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(title, color = foreground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(date, color = foreground, fontSize = 13.sp)
-    }
-}
-
-/** A coloured strip on top of the schedule: today is blue-ish, tomorrow is a different colour. */
-@Composable
-private fun DayBanner(tomorrow: Boolean, date: LocalDate) {
-    val background = if (tomorrow) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer
-    val foreground = if (tomorrow) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
-    val title = stringResource(if (tomorrow) R.string.tab_tomorrow else R.string.tab_today)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(background)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(vertical = 7.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            title.uppercase(Locale.getDefault()),
-            color = foreground,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.weight(1f))
-        Text(dateLine(date), color = foreground, fontSize = 14.sp)
+        Text(title, color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(8.dp))
+        Text(date, color = foreground, fontSize = 13.sp)
     }
 }
 
 private fun shortDate(date: LocalDate): String {
     val day = date.dayOfWeek.getDisplayName(DayTextStyle.SHORT, Locale.getDefault())
     return day + ", " + date.format(DateTimeFormatter.ofPattern("dd.MM"))
-}
-
-private fun dateLine(date: LocalDate): String {
-    val day = date.dayOfWeek.getDisplayName(DayTextStyle.FULL, Locale.getDefault())
-        .replaceFirstChar { it.uppercase() }
-    return day + " " + date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
 }
 
 /** 24 hours as two rows of 12 cells; each cell is split in halves, so half-hour outages are visible. */
