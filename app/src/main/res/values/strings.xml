@@ -127,4 +127,7 @@
     <string name="home_next">Next: %1$s</string>
     <string name="home_all_day_on">Power is on all day</string>
     <string name="home_drag_hint">Press and hold a card, then drag to reorder</string>
+    <string name="emergency_title">Emergency outage</string>
+    <string name="emergency_until">until %1$s</string>
+    <string name="emergency_reason">Reason: %1$s</string>
 </resources>

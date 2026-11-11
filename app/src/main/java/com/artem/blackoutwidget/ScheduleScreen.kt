@@ -23,7 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,11 +57,14 @@ import java.util.Locale
 // Orange = power on, gray = off, as on the widget. White hour numbers read on both.
 private val CellOn = Color(0xFFE88F00)
 private val CellOff = Color(0xFF6F6F75)
+private val CellUrgent = Color(0xFF2F8FE8)
 
 private fun textOn(dark: Boolean) = AppColors.on(dark)
 private fun textOff(dark: Boolean) = AppColors.off(dark)
+private fun textUrgent(dark: Boolean) = AppColors.emergency(dark)
 
 /** One place in detail: today / tomorrow, the 24-hour grid (two rows of 12) and the list of periods. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
     val ctx = LocalContext.current
@@ -108,6 +112,22 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
     val untilOnText = stringResource(R.string.until_on)
     val untilOffText = stringResource(R.string.until_off)
 
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            refreshing = true
+            scope.launch {
+                Refresher.refresh(ctx)
+                settings = Prefs.load(ctx)
+                if (shownId != null) {
+                    cache = Prefs.loadCache(ctx, shownId)
+                    status = Prefs.loadStatus(ctx, shownId)
+                }
+                refreshing = false
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -151,6 +171,8 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
                 Text(stringResource(R.string.edit))
             }
         } else {
+            val emergency = cache?.emergency?.takeIf { it.endMillis > System.currentTimeMillis() }
+            if (emergency != null) EmergencyNotice(emergency, dark)
             DaySwitch(tab = tab, today = today, onSelect = { tab = it })
 
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -163,7 +185,7 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
                     } else {
                         val slots = ScheduleLogic.slotsOf(hours)
                         val currentSlot = if (tab == 0) now.hour * 2 + now.minute / 30 else -1
-                        HourGrid(slots, currentSlot)
+                        HourGrid(slots, ScheduleLogic.emergencySlotsOf(hours), currentSlot)
 
                         val group = (cache?.group ?: "").removePrefix("GPV")
                         if (group.isNotBlank()) {
@@ -175,7 +197,7 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
                         }
 
                         Column {
-                            for (p in ScheduleLogic.periods(mapOf(date to hours))) {
+                            for (p in ScheduleLogic.periods(mapOf(date to hours), splitEmergency = true)) {
                                 PeriodRow(
                                     period = p,
                                     dark = dark,
@@ -188,36 +210,36 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    UpdatedText.format(ctx, cache?.updatedAtMillis, status.lastError != null),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedButton(
-                    enabled = !refreshing,
-                    onClick = {
-                        refreshing = true
-                        scope.launch {
-                            Refresher.refresh(ctx)
-                            settings = Prefs.load(ctx)
-                            if (shownId != null) {
-                                cache = Prefs.loadCache(ctx, shownId)
-                                status = Prefs.loadStatus(ctx, shownId)
-                            }
-                            refreshing = false
-                        }
-                    },
-                ) {
-                    Text(stringResource(if (refreshing) R.string.refreshing else R.string.refresh))
-                }
-            }
+            Text(
+                UpdatedText.format(ctx, cache?.updatedAtMillis, status.lastError != null),
+                style = MaterialTheme.typography.bodySmall,
+            )
             status.lastError?.let {
                 Text(
                     stringResource(R.string.last_error, it),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+        }
+    }
+    }
+}
+
+/** Shown while DTEK lists an emergency outage for the address: until when, and why. */
+@Composable
+private fun EmergencyNotice(e: Emergency, dark: Boolean) {
+    val color = textUrgent(dark)
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                stringResource(R.string.emergency_title) + " · " + stringResource(R.string.emergency_until, emergencyEnd(e)),
+                color = color,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            if (e.reason.isNotBlank()) {
+                Text(stringResource(R.string.emergency_reason, e.reason), style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -267,7 +289,7 @@ private fun shortDate(date: LocalDate): String {
 
 /** 24 hours as two rows of 12 cells; each cell is split in halves, so half-hour outages are visible. */
 @Composable
-private fun HourGrid(slots: BooleanArray, currentSlot: Int) {
+private fun HourGrid(slots: BooleanArray, urgent: BooleanArray, currentSlot: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for (row in 0..1) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -275,8 +297,8 @@ private fun HourGrid(slots: BooleanArray, currentSlot: Int) {
                     val hour = row * 12 + col
                     HourCell(
                         hour = hour,
-                        firstHalfOn = slots[hour * 2],
-                        secondHalfOn = slots[hour * 2 + 1],
+                        firstHalf = cellColor(slots[hour * 2], urgent[hour * 2]),
+                        secondHalf = cellColor(slots[hour * 2 + 1], urgent[hour * 2 + 1]),
                         isNow = currentSlot / 2 == hour,
                         modifier = Modifier.weight(1f),
                     )
@@ -286,11 +308,13 @@ private fun HourGrid(slots: BooleanArray, currentSlot: Int) {
     }
 }
 
+private fun cellColor(on: Boolean, urgent: Boolean) = if (urgent) CellUrgent else if (on) CellOn else CellOff
+
 @Composable
 private fun HourCell(
     hour: Int,
-    firstHalfOn: Boolean,
-    secondHalfOn: Boolean,
+    firstHalf: Color,
+    secondHalf: Color,
     isNow: Boolean,
     modifier: Modifier,
 ) {
@@ -308,13 +332,13 @@ private fun HourCell(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .background(if (firstHalfOn) CellOn else CellOff),
+                    .background(firstHalf),
             )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .background(if (secondHalfOn) CellOn else CellOff),
+                    .background(secondHalf),
             )
         }
         Text(hour.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -323,7 +347,7 @@ private fun HourCell(
 
 @Composable
 private fun PeriodRow(period: Period, dark: Boolean, current: Boolean, past: Boolean) {
-    val color = if (period.on) textOn(dark) else textOff(dark)
+    val color = if (period.emergency) textUrgent(dark) else if (period.on) textOn(dark) else textOff(dark)
     val minutes = Duration.between(period.start, period.end).toMinutes()
     val highlight = if (current) {
         Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))

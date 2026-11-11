@@ -46,6 +46,33 @@ object FactParser {
         return null
     }
 
+    private val STAMP = java.time.format.DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")
+
+    private fun stampMillis(text: String): Long? = try {
+        java.time.LocalDateTime.parse(text.trim(), STAMP).atZone(ScheduleLogic.ZONE).toInstant().toEpochMilli()
+    } catch (e: Exception) {
+        null
+    }
+
+    /**
+     * The emergency outage DTEK lists for a house in getHomeNum, if one is still going on:
+     * {"type":"2","sub_type":"Аварійні ремонтні роботи","start_date":"07:56 02.07.2025","end_date":"15:25 01.10.2026"}.
+     */
+    fun emergencyForHouse(homeJson: String, house: String, nowMillis: Long): Emergency? {
+        val data = JSONObject(homeJson).optJSONObject("data") ?: return null
+        val wanted = normalizeHouse(house)
+        for (key in data.keys()) {
+            if (normalizeHouse(key) != wanted) continue
+            val entry = data.optJSONObject(key) ?: continue
+            if (entry.optString("type") != "2") continue
+            val end = stampMillis(entry.optString("end_date")) ?: continue
+            if (end <= nowMillis) continue
+            val start = stampMillis(entry.optString("start_date")) ?: nowMillis
+            return Emergency(start, end, entry.optString("sub_type").trim())
+        }
+        return null
+    }
+
     /**
      * Reads DisconSchedule.fact: {"data":{"<dayStartEpochSeconds>":{"GPV6.2":{"1":"no",...}}},"update":"..."}
      * and returns the hourly statuses of one group for every day present.
@@ -83,6 +110,11 @@ object CacheJson {
             .put("dtekUpdate", c.dtekUpdate)
             .put("group", c.group)
             .put("days", days)
+            .also { json ->
+                c.emergency?.let {
+                    json.put("emergency", JSONObject().put("start", it.startMillis).put("end", it.endMillis).put("reason", it.reason))
+                }
+            }
             .toString()
     }
 
@@ -96,6 +128,9 @@ object CacheJson {
             for (h in hoursJson.keys()) hours[h.toInt()] = hoursJson.getString(h)
             days[LocalDate.parse(dateKey)] = hours
         }
-        return Cache(o.getLong("updated"), o.optString("dtekUpdate", ""), o.getString("group"), days)
+        val emergency = o.optJSONObject("emergency")?.let {
+            Emergency(it.getLong("start"), it.getLong("end"), it.optString("reason", ""))
+        }
+        return Cache(o.getLong("updated"), o.optString("dtekUpdate", ""), o.getString("group"), days, emergency)
     }
 }

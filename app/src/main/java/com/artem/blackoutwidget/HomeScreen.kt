@@ -24,10 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
@@ -49,6 +52,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+
+/** "15:25", or "15:25 01.10" when the outage ends on another day than today. */
+internal fun emergencyEnd(e: Emergency): String {
+    val end = java.time.Instant.ofEpochMilli(e.endMillis).atZone(ScheduleLogic.ZONE).toLocalDateTime()
+    val sameDay = end.toLocalDate() == LocalDateTime.now(ScheduleLogic.ZONE).toLocalDate()
+    return end.format(DateTimeFormatter.ofPattern(if (sameDay) "HH:mm" else "HH:mm dd.MM"))
+}
 
 private class PlaceRow(val place: Place, val cache: Cache?, val status: Status)
 
@@ -69,6 +80,7 @@ private fun loadRows(ctx: android.content.Context): List<PlaceRow> =
  * hold a card to pick it up, drag it over the others (they slide out of the way) and let go to drop it
  * there; tap it for the full schedule; "+" adds a place.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSettings: () -> Unit) {
     val ctx = LocalContext.current
@@ -153,6 +165,20 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+      // Pull down to refresh, as everywhere else.
+      PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            refreshing = true
+            scope.launch {
+                Refresher.refresh(ctx)
+                rows = loadRows(ctx)
+                order = rows.map { it.place.id }
+                refreshing = false
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+      ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -167,21 +193,9 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(
-                    enabled = !refreshing,
-                    onClick = {
-                        refreshing = true
-                        scope.launch {
-                            Refresher.refresh(ctx)
-                            rows = loadRows(ctx)
-                            order = rows.map { it.place.id }
-                            refreshing = false
-                        }
-                    },
-                ) {
-                    Text(stringResource(if (refreshing) R.string.refreshing else R.string.refresh))
+                IconButton(onClick = onOpenSettings) {
+                    Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.settings))
                 }
-                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.settings)) }
             }
 
             if (rows.isEmpty()) {
@@ -248,6 +262,7 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
             // Room so the last card can be scrolled clear of the "+" button.
             Spacer(Modifier.height(88.dp))
         }
+      }
 
         FloatingActionButton(
             onClick = onAddPlace,
@@ -263,6 +278,7 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
     val dark = isSystemInDarkTheme()
     val on = AppColors.on(dark)
     val off = AppColors.off(dark)
+    val urgent = AppColors.emergency(dark)
     val place = row.place
     val cache = row.cache
     val state = if (cache == null) WidgetState.NoData else ScheduleLogic.state(cache.days, now)
@@ -301,6 +317,16 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            val emergency = cache?.emergency?.takeIf { it.endMillis > System.currentTimeMillis() }
+            if (emergency != null) {
+                Text(
+                    stringResource(R.string.emergency_title) + " · " + stringResource(R.string.emergency_until, emergencyEnd(emergency)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = urgent,
+                )
+            }
+
             when (state) {
                 WidgetState.NoData -> Text(
                     stringResource(if (place.configured) R.string.no_data else R.string.place_not_configured),
@@ -318,7 +344,7 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
                         ScheduleLogic.hm(cur.start) + "–" + ScheduleLogic.hm(cur.end),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (cur.on) on else off,
+                        color = if (cur.emergency) urgent else if (cur.on) on else off,
                     )
                     val next = state.next
                     if (next != null) {
@@ -326,7 +352,7 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
                         Text(
                             stringResource(R.string.home_next, text),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (next.on) on else off,
+                            color = if (next.emergency) urgent else if (next.on) on else off,
                         )
                     }
                 }
@@ -339,7 +365,7 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                PillGraph(ScheduleLogic.slotsOf(today), now.hour * 2 + now.minute / 30, on)
+                PillGraph(ScheduleLogic.slotsOf(today), ScheduleLogic.emergencySlotsOf(today), now.hour * 2 + now.minute / 30, on, urgent)
             }
         }
     }
@@ -347,19 +373,20 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
 
 /** The day as 48 rounded pills of 30 minutes: orange = power on, gray = off, white = now. */
 @Composable
-private fun PillGraph(slots: BooleanArray, nowSlot: Int, on: Color) {
+private fun PillGraph(slots: BooleanArray, emergency: BooleanArray, nowSlot: Int, on: Color, urgent: Color) {
     val off = MaterialTheme.colorScheme.outlineVariant
     val nowColor = MaterialTheme.colorScheme.onSurface
     Column(modifier = Modifier.padding(top = 4.dp)) {
         Row(modifier = Modifier.fillMaxWidth().height(16.dp)) {
             for (i in 0 until 48) {
+                // Emergency = tallest, in its own colour; on = tall orange; off = short gray; all on the bottom line.
                 val color = when {
                     i == nowSlot -> nowColor
+                    emergency[i] -> urgent
                     slots[i] -> on
                     else -> off
                 }
-                // Power on = full height, off = shorter; all sit on the bottom line.
-                val full = slots[i] || i == nowSlot
+                val share = if (emergency[i] || i == nowSlot) 1f else if (slots[i]) 0.8f else 0.5f
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -370,7 +397,7 @@ private fun PillGraph(slots: BooleanArray, nowSlot: Int, on: Color) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .fillMaxHeight(if (full) 1f else 0.55f)
+                            .fillMaxHeight(share)
                             .clip(RoundedCornerShape(50))
                             .background(color),
                     )

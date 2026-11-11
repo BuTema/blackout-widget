@@ -90,11 +90,14 @@ object Refresher {
             throw DtekException(ctx.getString(R.string.err_no_group) + extra)
         }
 
-        val days = FactParser.parseGroupDays(raw.fact, group)
-        if (days.isEmpty()) {
+        val planned = FactParser.parseGroupDays(raw.fact, group)
+        if (planned.isEmpty()) {
             throw DtekException(ctx.getString(R.string.err_no_days, group))
         }
-        return Cache(now, FactParser.updateStamp(raw.fact), group, days)
+        // An emergency outage at the address (only known for places found by address) overrides the schedule.
+        val emergency = if (place.usesAddress && home != null) FactParser.emergencyForHouse(home, place.house, now) else null
+        val days = if (emergency != null) ScheduleLogic.overlayEmergency(planned, emergency) else planned
+        return Cache(now, FactParser.updateStamp(raw.fact), group, days, emergency)
     }
 
     /** Notifies about changes against the previous download of this place. */

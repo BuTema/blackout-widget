@@ -127,4 +127,7 @@
     <string name="home_next">Далі: %1$s</string>
     <string name="home_all_day_on">Світло є весь день</string>
     <string name="home_drag_hint">Утримайте картку й перетягніть, щоб змінити порядок</string>
+    <string name="emergency_title">Екстрене відключення</string>
+    <string name="emergency_until">до %1$s</string>
+    <string name="emergency_reason">Причина: %1$s</string>
 </resources>

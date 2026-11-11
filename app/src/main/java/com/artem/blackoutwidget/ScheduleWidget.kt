@@ -54,7 +54,7 @@ import java.util.Locale
 // Glance containers hold at most 10 children, so long rows (the 48 pills) are built from groups.
 
 /** One period: "12:00" to "16:00" with an optional caption such as "Power will be on". */
-private class Line(val from: String, val to: String, val caption: String, val on: Boolean)
+private class Line(val from: String, val to: String, val caption: String, val on: Boolean, val emergency: Boolean = false)
 
 /** One day: its periods, its 48 half-hour slots (true = power on) and, for today, the slot of "now". */
 private class DayView(
@@ -64,6 +64,8 @@ private class DayView(
     val nowSlot: Int?,
     /** Index in [lines] of the period that is on now, or -1. */
     val currentIndex: Int,
+    /** Slots that are off because of an emergency outage. */
+    val emergency: BooleanArray,
 )
 
 /** Everything the widget draws, already resolved to strings, so drawing is trivial. */
@@ -107,6 +109,10 @@ private object Palette {
 
     val chipDark = Color(0x33FFFFFF)
     val chipLight = Color(0x1F000000)
+
+    // An emergency outage: the only colour besides orange and gray.
+    val emergencyDark = Color(0xFF64B5FF)
+    val emergencyLight = Color(0xFF0A6FE0)
 }
 
 private class Colors(
@@ -117,6 +123,7 @@ private class Colors(
     val off: androidx.glance.unit.ColorProvider,
     val pillOff: androidx.glance.unit.ColorProvider,
     val chip: androidx.glance.unit.ColorProvider,
+    val emergency: androidx.glance.unit.ColorProvider,
 )
 
 private fun colorsFor(ui: Ui) = Colors(
@@ -130,7 +137,14 @@ private fun colorsFor(ui: Ui) = Colors(
     off = ColorProvider(day = Palette.offLight, night = Palette.offDark),
     pillOff = ColorProvider(day = Palette.pillOffLight, night = Palette.pillOffDark),
     chip = ColorProvider(day = Palette.chipLight, night = Palette.chipDark),
+    emergency = ColorProvider(day = Palette.emergencyLight, night = Palette.emergencyDark),
 )
+
+private fun Line.color(c: Colors) = when {
+    emergency -> c.emergency
+    on -> c.on
+    else -> c.off
+}
 
 private val PlaceKey = ActionParameters.Key<String>(MainActivity.EXTRA_PLACE)
 private val WidgetIdKey = ActionParameters.Key<Int>(AppWidgetManager.EXTRA_APPWIDGET_ID)
@@ -210,12 +224,12 @@ class ScheduleWidget : GlanceAppWidget() {
             }
             is WidgetState.Periods -> {
                 val cur = state.current
-                current = Line(ScheduleLogic.hm(cur.start), ScheduleLogic.hm(cur.end), "", cur.on)
+                current = Line(ScheduleLogic.hm(cur.start), ScheduleLogic.hm(cur.end), "", cur.on, cur.emergency)
                 val nx = state.next
                 if (nx != null) {
                     var caption = context.getString(if (nx.on) R.string.power_on_next else R.string.power_off_next)
                     if (nx.start.toLocalDate() != today) caption += context.getString(R.string.tomorrow_suffix)
-                    next = Line(ScheduleLogic.hm(nx.start), ScheduleLogic.hm(nx.end), caption, nx.on)
+                    next = Line(ScheduleLogic.hm(nx.start), ScheduleLogic.hm(nx.end), caption, nx.on, nx.emergency)
                 }
             }
         }
@@ -230,17 +244,20 @@ class ScheduleWidget : GlanceAppWidget() {
 
     private fun dayView(label: String, hours: Map<Int, String>, nowSlot: Int?): DayView {
         val slots = ScheduleLogic.slotsOf(hours)
-        val runs = ScheduleLogic.runs(slots)
+        val urgent = ScheduleLogic.emergencySlotsOf(hours)
+        // 0 = off by the schedule, 1 = on, 2 = off by an emergency outage; a period is a run of one kind.
+        val kinds = IntArray(slots.size) { if (urgent[it]) 2 else if (slots[it]) 1 else 0 }
         val lines = ArrayList<Line>()
-        var start = 0
         var currentIndex = -1
-        for ((i, run) in runs.withIndex()) {
-            val end = start + run.second
-            lines.add(Line(slotTime(start), slotTime(end), "", run.first))
-            if (nowSlot != null && nowSlot >= start && nowSlot < end) currentIndex = i
+        var start = 0
+        while (start < kinds.size) {
+            var end = start
+            while (end < kinds.size && kinds[end] == kinds[start]) end++
+            lines.add(Line(slotTime(start), slotTime(end), "", kinds[start] == 1, kinds[start] == 2))
+            if (nowSlot != null && nowSlot >= start && nowSlot < end) currentIndex = lines.lastIndex
             start = end
         }
-        return DayView(label, lines, slots, nowSlot, currentIndex)
+        return DayView(label, lines, slots, nowSlot, currentIndex, urgent)
     }
 }
 
@@ -344,7 +361,7 @@ private fun TinyContent(ui: Ui) {
         } else {
             for ((i, line) in lines.withIndex()) {
                 val style = TextStyle(
-                    color = if (line.on) c.on else c.off,
+                    color = line.color(c),
                     fontSize = (if (i == 0) font else font * 0.88f).sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -392,9 +409,9 @@ private fun StripContent(ui: Ui) {
             if (ui.message != null) MessageText(ui, c, (innerH * 0.4f).coerceIn(12f, 22f))
             return@Column
         }
-        val curStyle = { f: Float -> TextStyle(color = if (cur.on) c.on else c.off, fontSize = f.sp, fontWeight = FontWeight.Bold) }
+        val curStyle = { f: Float -> TextStyle(color = cur.color(c), fontSize = f.sp, fontWeight = FontWeight.Bold) }
         val nextStyle = { f: Float ->
-            TextStyle(color = if (next?.on == true) c.on else c.off, fontSize = f.sp, fontWeight = FontWeight.Bold)
+            TextStyle(color = next?.color(c) ?: c.off, fontSize = f.sp, fontWeight = FontWeight.Bold)
         }
         when {
             w < 170f -> {
@@ -558,7 +575,7 @@ private fun SquareContent(ui: Ui) {
                         text = line.from + "–" + line.to,
                         maxLines = 1,
                         style = TextStyle(
-                            color = if (line.on) c.on else c.off,
+                            color = line.color(c),
                             fontSize = lineSize.sp,
                             fontWeight = FontWeight.Bold,
                         ),
@@ -593,7 +610,7 @@ private fun LineBlock(line: Line, timeSize: Float, captionSize: Float, showCapti
             text = line.from + "–" + line.to,
             maxLines = 1,
             style = TextStyle(
-                color = if (line.on) c.on else c.off,
+                color = line.color(c),
                 fontSize = timeSize.sp,
                 fontWeight = FontWeight.Bold,
             ),
@@ -692,7 +709,7 @@ private fun WideContent(ui: Ui) {
                         text = cur.from + "–" + cur.to,
                         maxLines = 1,
                         style = TextStyle(
-                            color = if (cur.on) c.on else c.off,
+                            color = cur.color(c),
                             fontSize = bigSize.sp,
                             fontWeight = FontWeight.Bold,
                         ),
@@ -760,7 +777,7 @@ private fun PeriodGrid(day: DayView, perRow: Int, fontSize: Float, maxRows: Int,
                             text = line.from + "–" + line.to,
                             maxLines = 1,
                             style = TextStyle(
-                                color = if (line.on) c.on else c.off,
+                                color = line.color(c),
                                 fontSize = (if (isCurrent) fontSize else fontSize * 0.9f).sp,
                                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                             ),
@@ -808,13 +825,20 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
             Row(modifier = GlanceModifier.defaultWeight()) {
                 for (k in 0 until 8) {
                     val i = group * 8 + k
+                    // Emergency = the tallest pill in its own colour, power on = tall orange, off = short gray;
+                    // the pill of "now" is full height in the text colour. All sit on the bottom line.
+                    val urgent = day.emergency[i]
                     val color = when {
                         day.nowSlot == i -> c.text
+                        urgent -> c.emergency
                         day.slots[i] -> c.on
                         else -> c.pillOff
                     }
-                    // Power on = a full-height pill, power off = a shorter one, so the two read apart at a glance.
-                    val full = day.slots[i] || day.nowSlot == i
+                    val share = when {
+                        urgent || day.nowSlot == i -> 1f
+                        day.slots[i] -> 0.8f
+                        else -> 0.5f
+                    }
                     Box(
                         modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = 0.6.dp),
                         contentAlignment = Alignment.BottomCenter,
@@ -822,7 +846,7 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
                         Spacer(
                             modifier = GlanceModifier
                                 .fillMaxWidth()
-                                .height((if (full) height else height * 0.55f).dp)
+                                .height((height * share).dp)
                                 .background(color)
                                 .cornerRadius(3.dp),
                         )
