@@ -172,7 +172,7 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
             }
         } else {
             val emergency = cache?.emergency?.takeIf { it.endMillis > System.currentTimeMillis() }
-            if (emergency != null) EmergencyNotice(emergency, dark)
+            if (emergency != null) EmergencyNotice(emergency, dark, noGroup = cache?.group.isNullOrBlank())
             DaySwitch(tab = tab, today = today, onSelect = { tab = it })
 
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -228,7 +228,7 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
 
 /** Shown while DTEK lists an emergency outage for the address: until when, and why. */
 @Composable
-private fun EmergencyNotice(e: Emergency, dark: Boolean) {
+private fun EmergencyNotice(e: Emergency, dark: Boolean, noGroup: Boolean) {
     val color = textUrgent(dark)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -240,6 +240,13 @@ private fun EmergencyNotice(e: Emergency, dark: Boolean) {
             )
             if (e.reason.isNotBlank()) {
                 Text(stringResource(R.string.emergency_reason, e.reason), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (noGroup) {
+                Text(
+                    stringResource(R.string.emergency_no_group),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

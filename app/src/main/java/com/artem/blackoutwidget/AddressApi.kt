@@ -9,7 +9,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /** One house number from DTEK's list for a street, with its schedule group when DTEK names one. */
-data class HouseInfo(val number: String, val group: String?)
+/** [emergency]: DTEK lists an emergency outage for the house (then it often names no schedule group). */
+data class HouseInfo(val number: String, val group: String?, val emergency: Boolean = false)
 
 /** Reads DTEK's address answers. Pure functions, no Android calls, so they are unit-tested. */
 object AddressParsing {
@@ -55,7 +56,8 @@ object AddressParsing {
         val out = ArrayList<HouseInfo>()
         for (number in data.keys()) {
             var group: String? = null
-            val reasons = data.optJSONObject(number)?.optJSONArray("sub_type_reason")
+            val entry = data.optJSONObject(number)
+            val reasons = entry?.optJSONArray("sub_type_reason")
             if (reasons != null) {
                 for (i in 0 until reasons.length()) {
                     val id = reasons.optString(i)
@@ -65,7 +67,7 @@ object AddressParsing {
                     }
                 }
             }
-            out.add(HouseInfo(number, group))
+            out.add(HouseInfo(number, group, entry?.optString("type") == "2"))
         }
         // 3, 3а, 5, 9, 9а, 10 - by the leading number, then by the rest.
         return out.sortedWith(

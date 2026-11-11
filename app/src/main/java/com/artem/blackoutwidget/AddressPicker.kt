@@ -170,6 +170,7 @@ private fun StatusLine(check: AddressCheck) {
         AddressState.HOUSE_UNKNOWN -> stringResource(R.string.addr_house_not_found) to error
         AddressState.NO_GROUP -> stringResource(R.string.addr_no_group) to error
         AddressState.FOUND -> stringResource(R.string.addr_found, group) to good
+        AddressState.EMERGENCY_NO_GROUP -> stringResource(R.string.addr_emergency_no_group) to muted
         AddressState.SAVED -> stringResource(R.string.addr_saved, group) to good
         AddressState.UNVERIFIED -> stringResource(R.string.addr_unverified) to muted
     }

@@ -130,4 +130,6 @@
     <string name="emergency_title">Екстрене відключення</string>
     <string name="emergency_until">до %1$s</string>
     <string name="emergency_reason">Причина: %1$s</string>
+    <string name="addr_emergency_no_group">За цим будинком зараз діє екстрене відключення, тому ДТЕК не вказує чергу. Адресу можна зберегти: графік з'явиться після завершення</string>
+    <string name="emergency_no_group">ДТЕК не вказує чергу цього будинку під час відключення, тому показано лише екстрене відключення, без планового графіка</string>
 </resources>

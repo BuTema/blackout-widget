@@ -13,6 +13,8 @@ enum class AddressState {
     NO_GROUP,
     /** DTEK confirmed the house and named its group. */
     FOUND,
+    /** An emergency outage is on at the house, so DTEK names no group now; the group comes later. */
+    EMERGENCY_NO_GROUP,
     /** DTEK could not be asked (no network); the address is kept as typed. */
     UNVERIFIED,
     /** The address that is already saved, untouched. */
@@ -28,7 +30,8 @@ data class AddressCheck(
     val group: String?,
 ) {
     val canSave: Boolean
-        get() = state == AddressState.FOUND || state == AddressState.UNVERIFIED || state == AddressState.SAVED
+        get() = state == AddressState.FOUND || state == AddressState.EMERGENCY_NO_GROUP ||
+            state == AddressState.UNVERIFIED || state == AddressState.SAVED
 }
 
 /** Where the house list for the typed city and street stands. */
@@ -96,6 +99,8 @@ object AddressValidator {
                     val match = lookup.houses.firstOrNull { FactParser.normalizeHouse(it.number) == wanted }
                     when {
                         match == null -> result(AddressState.HOUSE_UNKNOWN, canonCity, canonStreet)
+                        match.group == null && match.emergency ->
+                            result(AddressState.EMERGENCY_NO_GROUP, canonCity, canonStreet, match.number)
                         match.group == null -> result(AddressState.NO_GROUP, canonCity, canonStreet, match.number)
                         else -> result(AddressState.FOUND, canonCity, canonStreet, match.number, match.group)
                     }

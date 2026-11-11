@@ -130,4 +130,6 @@
     <string name="emergency_title">Emergency outage</string>
     <string name="emergency_until">until %1$s</string>
     <string name="emergency_reason">Reason: %1$s</string>
+    <string name="addr_emergency_no_group">An emergency outage is on at this house, so DTEK names no queue now. The address is saved; the schedule appears once the outage ends</string>
+    <string name="emergency_no_group">DTEK has no queue for this house during the outage, so only the emergency outage is shown, not a planned schedule</string>
 </resources>

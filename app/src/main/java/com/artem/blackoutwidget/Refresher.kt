@@ -86,6 +86,14 @@ object Refresher {
         // Never fall back to an old detected group when the user picked a queue by hand.
         if (group == null && !place.byGroup) group = place.detectedGroup.ifBlank { null }
         if (group == null) {
+            // During an emergency outage DTEK names no group for most houses. The outage itself is still
+            // worth showing: an all-day-on baseline with the emergency laid over it, until a group is known.
+            val emergency = if (place.usesAddress && home != null) FactParser.emergencyForHouse(home, place.house, now) else null
+            if (emergency != null) {
+                val today = java.time.LocalDate.now(ScheduleLogic.ZONE)
+                val baseline = (0..1L).associate { today.plusDays(it) to (1..24).associateWith { "yes" } }
+                return Cache(now, FactParser.updateStamp(raw.fact), "", ScheduleLogic.overlayEmergency(baseline, emergency), emergency)
+            }
             val extra = raw.warning?.let { " ($it)" } ?: ""
             throw DtekException(ctx.getString(R.string.err_no_group) + extra)
         }
