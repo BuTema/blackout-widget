@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
         requestedPlace.value = intent?.getStringExtra(EXTRA_PLACE)
         setContent {
             val dark = isSystemInDarkTheme()
-            MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+            AppTheme(dark) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     // From Android 15 apps draw edge to edge, so keep content clear of the system bars.
                     Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {

@@ -54,11 +54,12 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle as DayTextStyle
 import java.util.Locale
 
-private val CellOn = Color(0xFF2FA04F)
-private val CellOff = Color(0xFFD94848)
+// Orange = power on, gray = off, as on the widget. White hour numbers read on both.
+private val CellOn = Color(0xFFE88F00)
+private val CellOff = Color(0xFF6F6F75)
 
-private fun textOn(dark: Boolean) = if (dark) Color(0xFF6FE08A) else Color(0xFF1B8A3A)
-private fun textOff(dark: Boolean) = if (dark) Color(0xFFFF7A6E) else Color(0xFFC62828)
+private fun textOn(dark: Boolean) = AppColors.on(dark)
+private fun textOff(dark: Boolean) = AppColors.off(dark)
 
 /** One place in detail: today / tomorrow, the 24-hour grid (two rows of 12) and the list of periods. */
 @Composable

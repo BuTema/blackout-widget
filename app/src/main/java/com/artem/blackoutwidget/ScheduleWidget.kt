@@ -818,7 +818,7 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
                     val full = day.slots[i] || day.nowSlot == i
                     Box(
                         modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = 0.6.dp),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.BottomCenter,
                     ) {
                         Spacer(
                             modifier = GlanceModifier

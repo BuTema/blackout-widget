@@ -207,8 +207,8 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
 @Composable
 private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modifier: Modifier) {
     val dark = isSystemInDarkTheme()
-    val on = if (dark) Color(0xFFFF9F0A) else Color(0xFFE08600)
-    val off = if (dark) Color(0xFFB0B0B5) else Color(0xFF6B6B70)
+    val on = AppColors.on(dark)
+    val off = AppColors.off(dark)
     val place = row.place
     val cache = row.cache
     val state = if (cache == null) WidgetState.NoData else ScheduleLogic.state(cache.days, now)
@@ -299,14 +299,23 @@ private fun PillGraph(slots: BooleanArray, nowSlot: Int, on: Color) {
                     slots[i] -> on
                     else -> off
                 }
+                // Power on = full height, off = shorter; all sit on the bottom line.
+                val full = slots[i] || i == nowSlot
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(horizontal = 0.7.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(color),
-                )
+                        .padding(horizontal = 0.7.dp),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(if (full) 1f else 0.55f)
+                            .clip(RoundedCornerShape(50))
+                            .background(color),
+                    )
+                }
             }
         }
         Row(modifier = Modifier.fillMaxWidth()) {
