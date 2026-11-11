@@ -251,6 +251,7 @@ private fun WidgetContent(ui: Ui) {
     when {
         ui.prompt != null -> PromptContent(ui)
         size.width < 100.dp -> TinyContent(ui)
+        size.height < 100.dp -> StripContent(ui)
         size.width >= 240.dp -> WideContent(ui)
         else -> SquareContent(ui)
     }
@@ -276,27 +277,59 @@ private fun PromptContent(ui: Ui) {
     }
 }
 
-/** 1x1 and narrow tall widgets: only the current stretch of time, as large as it fits. */
+/** Tapping a small widget opens the app on its place. */
+private fun openPlace(ui: Ui) = actionStartActivity<MainActivity>(actionParametersOf(PlaceKey to (ui.placeId ?: "")))
+
+/** The text shown instead of periods: "no outages today", "no schedule yet". */
+@Composable
+private fun MessageText(ui: Ui, c: Colors, size: Float) {
+    Text(
+        text = ui.message ?: "",
+        maxLines = 3,
+        style = TextStyle(
+            color = if (ui.messageOn) c.on else c.muted,
+            fontSize = size.sp,
+            fontWeight = FontWeight.Bold,
+        ),
+    )
+}
+
+/**
+ * One cell wide (1x1 ... 1x5): the periods as stacked pairs of times, as large as the width allows.
+ * A tall widget lists as many periods as fit, starting with the current one.
+ */
 @Composable
 private fun TinyContent(ui: Ui) {
     val size = LocalSize.current
     val c = colorsFor(ui)
-    val pad = 4.dp
-    val inner = (size.width - pad * 2).value.coerceAtLeast(30f)
-    val showName = size.height >= 100.dp
-    // "06:30" is about 2.9 character widths per point of font size; the two times are stacked.
-    val fitWidth = inner * FIT / 2.9f
-    val heightLeft = size.height.value * FIT - pad.value * 2 - (if (showName) 20f else 0f)
-    val fitHeight = heightLeft / (2 * 1.15f)
-    val timeSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 44f).sp
+    val pad = 4f
+    val h = size.height.value
+    val inner = (size.width.value - pad * 2).coerceAtLeast(30f)
+    val showName = h >= 100f
+    val nameH = if (showName) 20f else 0f
+    val avail = h - pad * 2 - nameH
+    // "06:30" is about 2.9 character widths of bold text per point; one period is two stacked times.
+    val byWidth = inner * FIT / 2.9f * ui.textScale
+    val byHeight = avail / (2 * 1.2f + 0.3f)
+    val font = minOf(byWidth, maxOf(byHeight, 12f)).coerceIn(12f, 44f)
+    val blockH = font * 2 * 1.2f + 8f
+    val capacity = (avail / blockH).toInt().coerceIn(1, 8)
+
+    val day = ui.days.getOrNull(0)
+    val start = day?.currentIndex?.takeIf { it >= 0 } ?: 0
+    val lines: List<Line> = when {
+        ui.current == null -> emptyList()
+        day != null && day.currentIndex >= 0 -> day.lines.drop(start).take(capacity)
+        else -> listOfNotNull(ui.current, ui.next).take(capacity)
+    }
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(c.background)
             .cornerRadius(18.dp)
-            .padding(pad)
-            .clickable(actionStartActivity<MainActivity>(actionParametersOf(PlaceKey to (ui.placeId ?: "")))),
+            .padding(pad.dp)
+            .clickable(openPlace(ui)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -307,21 +340,107 @@ private fun TinyContent(ui: Ui) {
                 style = TextStyle(color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.Medium),
             )
         }
-        val cur = ui.current
-        if (cur != null) {
-            val style = TextStyle(color = if (cur.on) c.on else c.off, fontSize = timeSize, fontWeight = FontWeight.Bold)
-            Text(text = cur.from, maxLines = 1, style = style)
-            Text(text = cur.to, maxLines = 1, style = style)
-        } else if (ui.message != null) {
-            Text(
-                text = ui.message,
-                maxLines = 3,
-                style = TextStyle(
-                    color = if (ui.messageOn) c.on else c.muted,
-                    fontSize = (timeSize.value * 0.55f).coerceIn(11f, 18f).sp,
+        if (lines.isEmpty()) {
+            if (ui.message != null) MessageText(ui, c, (font * 0.55f).coerceIn(11f, 18f))
+        } else {
+            for ((i, line) in lines.withIndex()) {
+                val style = TextStyle(
+                    color = if (line.on) c.on else c.off,
+                    fontSize = (if (i == 0) font else font * 0.88f).sp,
                     fontWeight = FontWeight.Bold,
-                ),
-            )
+                )
+                Column(
+                    modifier = GlanceModifier.padding(bottom = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(text = line.from, maxLines = 1, style = style)
+                    Text(text = line.to, maxLines = 1, style = style)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One cell tall (2x1, 3x1, 4x1 and wider): everything is set in a single row, so the text is large and
+ * nothing overlaps. Narrow: name above, current and next below. Medium: periods left, name right.
+ * Wide: name and update time, current and next side by side, and a thin strip of the 48 pills.
+ */
+@Composable
+private fun StripContent(ui: Ui) {
+    val size = LocalSize.current
+    val c = colorsFor(ui)
+    val pad = 6f
+    val w = size.width.value
+    val h = size.height.value
+    val innerW = w - pad * 2
+    val innerH = h - pad * 2
+    val shrink = if (ui.textScale < 1f) ui.textScale else 1f
+    val cur = ui.current
+    val next = ui.next
+
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(c.background)
+            .cornerRadius(20.dp)
+            .padding(pad.dp)
+            .clickable(openPlace(ui)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (cur == null) {
+            Text(text = ui.name, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+            if (ui.message != null) MessageText(ui, c, (innerH * 0.4f).coerceIn(12f, 22f))
+            return@Column
+        }
+        val curStyle = { f: Float -> TextStyle(color = if (cur.on) c.on else c.off, fontSize = f.sp, fontWeight = FontWeight.Bold) }
+        val nextStyle = { f: Float ->
+            TextStyle(color = if (next?.on == true) c.on else c.off, fontSize = f.sp, fontWeight = FontWeight.Bold)
+        }
+        when {
+            w < 170f -> {
+                val f = (minOf(innerW / 5.6f, (innerH - 16f) / (1.25f * 1.8f), 40f) * shrink).coerceAtLeast(11f)
+                Text(text = ui.name, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+                Text(text = cur.from + "–" + cur.to, maxLines = 1, style = curStyle(f))
+                if (next != null) Text(text = next.from + "–" + next.to, maxLines = 1, style = nextStyle(f * 0.8f))
+            }
+            w < 240f -> {
+                val rightW = minOf(innerW * 0.32f, 84f)
+                val f = (minOf((innerW - rightW) / 5.6f, innerH / (1.25f * 1.8f), 40f) * shrink).coerceAtLeast(11f)
+                Row(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = GlanceModifier.defaultWeight()) {
+                        Text(text = cur.from + "–" + cur.to, maxLines = 1, style = curStyle(f))
+                        if (next != null) Text(text = next.from + "–" + next.to, maxLines = 1, style = nextStyle(f * 0.8f))
+                    }
+                    Column(modifier = GlanceModifier.width(rightW.dp), horizontalAlignment = Alignment.End) {
+                        Text(text = ui.name, maxLines = 1, style = TextStyle(color = c.text, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                        if (innerH >= 52f) {
+                            Text(text = ui.updated, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 9.sp))
+                        }
+                    }
+                }
+            }
+            else -> {
+                val day = ui.days.getOrNull(0)
+                val graphH = if (day != null) 10f else 0f
+                val availH = innerH - 14f - graphH - 6f
+                val f = (minOf((innerW / 2f - 4f) / 5.6f, availH / 1.25f, 40f) * shrink).coerceAtLeast(11f)
+                Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = GlanceModifier.defaultWeight()) {
+                        Text(text = ui.name, maxLines = 1, style = TextStyle(color = c.text, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                    }
+                    Text(text = ui.updated, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 10.sp))
+                }
+                Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = GlanceModifier.defaultWeight()) {
+                        Text(text = cur.from + "–" + cur.to, maxLines = 1, style = curStyle(f))
+                    }
+                    Box(modifier = GlanceModifier.defaultWeight()) {
+                        if (next != null) Text(text = next.from + "–" + next.to, maxLines = 1, style = nextStyle(f * 0.85f))
+                    }
+                }
+                if (day != null) PillRow(day, graphH, c, GlanceModifier.fillMaxWidth())
+            }
         }
     }
 }
