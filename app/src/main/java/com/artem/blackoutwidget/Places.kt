@@ -40,14 +40,14 @@ data class Place(
     val manualGroup: String = "",
     /** Queue found from the address (when the address was checked or fetched). */
     val detectedGroup: String = "",
+    /** Whether the notification options (changes, reminders) apply to this place. */
+    val notify: Boolean = true,
     /**
      * The queue of the neighbouring houses, for an address DTEK has no queue for. Not empty = the person
      * chose to see that queue's schedule (marked as approximate) together with the address's own
      * emergency outages.
      */
     val neighborGroup: String = "",
-    /** Whether the notification options (changes, reminders) apply to this place. */
-    val notify: Boolean = true,
 ) {
     val region: DtekRegion get() = DtekRegion.byId(regionId)
 
