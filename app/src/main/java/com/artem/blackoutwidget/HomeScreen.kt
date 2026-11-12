@@ -365,11 +365,6 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
 
             val today = cache?.days?.get(now.toLocalDate())
             if (today != null) {
-                Text(
-                    stringResource(R.string.tab_today) + " · " + now.toLocalDate().format(DateTimeFormatter.ofPattern("dd.MM")),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 PillGraph(ScheduleLogic.slotsOf(today), ScheduleLogic.emergencySlotsOf(today), now.hour * 2 + now.minute / 30, on, urgent)
             }
         }

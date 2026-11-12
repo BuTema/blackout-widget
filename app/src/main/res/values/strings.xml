@@ -135,5 +135,6 @@
     <string name="addr_street_group">The houses of this street that DTEK lists have queue %1$s. Yours may differ</string>
     <string name="addr_use_group">Use queue %1$s</string>
     <string name="addr_use_neighbor">Show this house\'s emergency outages and the schedule of the nearest queue %1$s</string>
+    <string name="group_approx_short">Queue: %1$s (≈)</string>
     <string name="group_approx">Queue: %1$s (nearest, from neighbouring houses)</string>
 </resources>

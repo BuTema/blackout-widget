@@ -87,6 +87,11 @@ private class Ui(
     val darkAlpha: Float,
     val lightAlpha: Float,
     val textScale: Float,
+    /** The queue as "Queue: 6.2" and short ("6.2"); empty when unknown. */
+    val group: String = "",
+    val groupShort: String = "",
+    /** "Next: 18:00–22:00", as on the cards of the app. */
+    val nextText: String = "",
 )
 
 private object Palette {
@@ -234,9 +239,15 @@ class ScheduleWidget : GlanceAppWidget() {
             }
         }
         val showTomorrow = days.size > 1 && Prefs.isTomorrowShown(context, appWidgetId, today)
+        val queue = (cache?.group ?: place.knownGroup ?: "").removePrefix("GPV")
+        val approx = cache?.approxGroup == true
+        val group = if (queue.isBlank()) "" else context.getString(if (approx) R.string.group_approx_short else R.string.group_in_use, queue)
+        val groupShort = if (queue.isBlank()) "" else (if (approx) "≈" else "") + queue
+        val nextText = next?.let { context.getString(R.string.home_next, it.from + "–" + it.to) } ?: ""
         return Ui(
             appWidgetId, place.id, name, updated, null, current, next, message, messageOn,
             days, showTomorrow, settings.darkAlpha, settings.lightAlpha, settings.textScale,
+            group, groupShort, nextText,
         )
     }
 
@@ -268,8 +279,7 @@ private fun WidgetContent(ui: Ui) {
         ui.prompt != null -> PromptContent(ui)
         size.width < 100.dp -> TinyContent(ui)
         size.height < 100.dp -> StripContent(ui)
-        size.width >= 240.dp -> WideContent(ui)
-        else -> SquareContent(ui)
+        else -> CardContent(ui)
     }
 }
 
@@ -461,235 +471,63 @@ private fun StripContent(ui: Ui) {
     }
 }
 
-/** The name row: home icon, name (opens the app) and, when tomorrow is known, the day switch. */
-@Composable
-private fun Header(ui: Ui, c: Colors, nameSize: Float, showIcon: Boolean, showSwitch: Boolean) {
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = GlanceModifier.defaultWeight().clickable(
-                // The key name becomes the intent extra the app reads to open the right place.
-                actionStartActivity<MainActivity>(actionParametersOf(PlaceKey to (ui.placeId ?: ""))),
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (showIcon) {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_home),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size((nameSize + 3f).dp),
-                    colorFilter = ColorFilter.tint(c.muted),
-                )
-                Spacer(modifier = GlanceModifier.width(5.dp))
-            }
-            Text(
-                text = ui.name,
-                maxLines = 1,
-                style = TextStyle(color = c.text, fontSize = nameSize.sp, fontWeight = FontWeight.Bold),
-            )
-        }
-        if (showSwitch && ui.days.size > 1) {
-            Box(
-                modifier = GlanceModifier
-                    .background(c.chip)
-                    .cornerRadius(12.dp)
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                    .clickable(actionRunCallback<ToggleDayAction>()),
-            ) {
-                Text(
-                    text = if (ui.showTomorrow) "‹ " + ui.days[0].label else ui.days[1].label + " ›",
-                    maxLines = 1,
-                    style = TextStyle(color = c.text, fontSize = 11.sp, fontWeight = FontWeight.Medium),
-                )
-            }
-        }
-    }
-}
-
 /**
  * The size the launcher reports is the minimum of what the widget is given, and the real widget is
  * usually a little larger, so sizes are fitted to this much more than the reported size.
  */
 private const val FIT = 1.15f
 
-/** Two lines for 2x2 / 2x3: the current period large, the next below it. Tomorrow lists all its periods. */
-@Composable
-private fun SquareContent(ui: Ui) {
-    val size = LocalSize.current
-    val c = colorsFor(ui)
-    val pad = if (size.height < 120.dp) 8.dp else 10.dp
-    val h = size.height.value
-    val innerWidth = (size.width - pad * 2).value.coerceAtLeast(60f)
-    val nameSize = when {
-        h >= 150f -> 19f
-        h >= 110f -> 16f
-        else -> 14f
-    }
-    val showUpdated = h >= 135f
-    val captionSize = if (h >= 150f) 12f else 11f
-    val showNextCaption = h >= 150f
-    val wide = size.width >= 140.dp
-    // Only widgets bigger than 2x2 carry the today/tomorrow switch; a 2x2 shows what is going on now.
-    val canSwitch = size.height >= 160.dp || size.width >= 170.dp
-    val showTomorrow = canSwitch && ui.showTomorrow
-
-    // "06:30–13:30" is about 5.1 character widths of bold text per point of font size, so this is the
-    // largest size that still fits the width. The person's size setting scales it; the height caps it.
-    val fitWidth = innerWidth / 5.6f
-    val headerHeight = nameSize * 1.3f + (if (showUpdated) 13f else 0f)
-    val lines = if (ui.next != null) 2 else 1
-    val captionHeight = if (ui.next != null && showNextCaption) captionSize * 1.25f else 0f
-    val heightLeft = h * FIT - pad.value * 2 - headerHeight - captionHeight - 8f
-    val fitHeight = heightLeft / (lines * 1.2f)
-    val timeSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 48f)
-
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(c.background)
-            .cornerRadius(22.dp)
-            .padding(pad)
-            .clickable(actionRunCallback<RefreshAction>()),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Header(ui, c, nameSize, showIcon = wide && h >= 110f, showSwitch = canSwitch)
-        if (showUpdated) {
-            Text(
-                text = ui.updated,
-                maxLines = 1,
-                style = TextStyle(color = c.muted, fontSize = 10.sp),
-            )
-        }
-        Spacer(modifier = GlanceModifier.defaultWeight())
-
-        val day = if (showTomorrow) ui.days.getOrNull(1) else null
-        if (day != null) {
-            // Tomorrow: every period, as many as fit.
-            val lineSize = (timeSize * 0.8f).coerceAtLeast(12f)
-            val room = ((h * FIT - pad.value * 2 - headerHeight - 8f) / (lineSize * 1.3f)).toInt()
-            Column {
-                for (line in day.lines.take(room.coerceIn(1, 8))) {
-                    Text(
-                        text = line.from + "–" + line.to,
-                        maxLines = 1,
-                        style = TextStyle(
-                            color = line.color(c),
-                            fontSize = lineSize.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                }
-            }
-        } else {
-            if (ui.message != null) {
-                Text(
-                    text = ui.message,
-                    style = TextStyle(
-                        color = if (ui.messageOn) c.on else c.muted,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                )
-            }
-            ui.current?.let { LineBlock(it, timeSize, captionSize, false, c) }
-            ui.next?.let {
-                Spacer(modifier = GlanceModifier.height(4.dp))
-                LineBlock(it, timeSize * 0.85f, captionSize, showNextCaption, c)
-            }
-        }
-        Spacer(modifier = GlanceModifier.defaultWeight())
-    }
-}
-
-@Composable
-private fun LineBlock(line: Line, timeSize: Float, captionSize: Float, showCaption: Boolean, c: Colors) {
-    Column {
-        Text(
-            text = line.from + "–" + line.to,
-            maxLines = 1,
-            style = TextStyle(
-                color = line.color(c),
-                fontSize = timeSize.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-        )
-        if (showCaption && line.caption.isNotEmpty()) {
-            Text(
-                text = line.caption,
-                maxLines = 1,
-                style = TextStyle(color = c.muted, fontSize = captionSize.sp),
-            )
-        }
-    }
-}
-
 /**
- * 4x2 and bigger: the periods of the day and the day as 48 pills, using the whole width. When there is
- * room for both days they are stacked; otherwise a switch in the corner flips to tomorrow, and when the
- * list does not fit it starts at the current period.
+ * The widget drawn like the place card of the app: name (and queue) on top, the "updated" line, the current
+ * period large, the next one, and the day as pills with the hours below. Sizes only change how much of this
+ * fits: the queue needs width, the "updated" line and the day switch need height or width, and in a wide
+ * widget the next period sits beside the current one. Tomorrow lists its periods instead.
  */
 @Composable
-private fun WideContent(ui: Ui) {
+private fun CardContent(ui: Ui) {
     val size = LocalSize.current
     val c = colorsFor(ui)
-    val pad = 8f
-    val inner = size.width.value - pad * 2
-    // The reported height is the least the widget has, so heights are fitted to it exactly: nothing is cut off.
+    val w = size.width.value
     val h = size.height.value
-    val scale = ui.textScale.coerceIn(0.8f, 1.5f)
-    val labelWidth = 40f
+    val wide = w >= 240f
+    val pad = if (h < 120f) 8f else 12f
+    val inner = w - pad * 2
 
-    val today = ui.days.getOrNull(0)
-    val tomorrow = ui.days.getOrNull(1)
+    val today = ui.days.firstOrNull { it.nowSlot != null }
+    val tomorrowDay = ui.days.firstOrNull { it.nowSlot == null }
+    // Only widgets bigger than 2x2 carry the today/tomorrow switch.
+    val canSwitch = (h >= 160f || w >= 170f) && today != null && tomorrowDay != null
+    val showTomorrow = canSwitch && ui.showTomorrow
+    val day = if (showTomorrow) tomorrowDay else today
 
-    // The periods are set in equal columns that fill the width; more columns on wider widgets.
-    val maxPerRow = if (inner > 330f) 4 else 3
-    fun perRowOf(day: DayView?) = minOf(maxPerRow, day?.lines?.size ?: 1).coerceAtLeast(1)
-    fun fontOf(perRow: Int, cap: Float) =
-        (((inner * FIT / perRow) - 8f) / 5.4f).coerceIn(11f, cap) * scale
-    fun rowsOf(day: DayView?, perRow: Int) = if (day == null) 0 else (day.lines.size + perRow - 1) / perRow
-
-    val headerH = 28f
-    val gap = 4f
-    val pillLarge = 22f
-    val pillSmall = 16f
-    fun graphH(pill: Float) = pill + 12f + gap
-
-    // Both days at once, with a big current period, when the height allows.
-    val bigSize = ((inner * FIT * 0.5f) / 5.1f).coerceIn(22f, 36f) * scale
-    val bigH = bigSize * 1.25f
-    val fBoth = fontOf(perRowOf(today), 20f)
-    val needBoth = pad * 2 + headerH + bigH + 3 * gap +
-        rowsOf(today, perRowOf(today)) * fBoth * 1.4f + graphH(pillLarge) +
-        rowsOf(tomorrow, perRowOf(tomorrow)) * fBoth * 1.4f + graphH(pillLarge)
-    val both = tomorrow != null && h >= needBoth
-
-    val oneDay = if (ui.showTomorrow) tomorrow else today
-    val thick = both || h >= 150f
-    val pill = if (thick) pillLarge else pillSmall
-    val headerGap = 2 * gap + graphH(pill)
-
-    // One day: the periods get the largest font at which they fill the width and the height that is left,
-    // in 1..4 columns, whichever arrangement allows the biggest text.
-    data class Fit(val perRow: Int, val font: Float)
-    fun bestFit(day: DayView?, availableHeight: Float): Fit {
-        val n = day?.lines?.size ?: 1
-        var best = Fit(1, 11f)
-        for (perRow in 1..minOf(maxPerRow, n).coerceAtLeast(1)) {
-            val rows = (n + perRow - 1) / perRow
-            val byWidth = ((inner * FIT / perRow) - 8f) / 5.4f
-            val byHeight = availableHeight / (rows * 1.45f)
-            val font = minOf(byWidth, byHeight, 40f)
-            if (font > best.font) best = Fit(perRow, font)
-        }
-        return Fit(best.perRow, if (scale < 1f) best.font * scale else best.font)
+    val nameSize = when {
+        h >= 150f -> 20f
+        h >= 110f -> 17f
+        else -> 15f
     }
-    val availablePlain = h - (pad * 2 + headerH + 13f + headerGap)
-    val availableBig = availablePlain - (bigH - 13f)
-    val showBig = both || (!ui.showTomorrow && bestFit(oneDay, availableBig).font >= 18f)
-    val fit = bestFit(oneDay, if (showBig) availableBig else availablePlain)
+    val showUpdated = h >= 120f
+    val chipOnUpdatedRow = canSwitch && showUpdated
+    val chipOnTop = canSwitch && !showUpdated
+    val group = when {
+        w < 140f || chipOnTop -> null
+        w < 200f -> ui.groupShort
+        else -> ui.group
+    }?.takeIf { it.isNotEmpty() }
+    val showGraph = day != null && (w >= 140f || h >= 150f)
+    val pill = if (h >= 150f) 20f else 16f
+
+    val headerH = nameSize * 1.3f + (if (showUpdated) (if (chipOnUpdatedRow) 22f else 13f) else 0f)
+    val graphH = if (showGraph) pill + 12f + 4f else 0f
+    val free = h - pad * 2 - headerH - graphH - 6f
+
+    val cur = ui.current
+    val hasNext = cur != null && ui.next != null
+    val nextBeside = wide && hasNext
+    val nextBelowH = if (hasNext && !nextBeside) 13f * 1.3f + 2f else 0f
+    val fitHeight = (free - nextBelowH) / 1.25f
+    val fitWidth = (if (nextBeside) inner * 0.58f else inner) / 5.6f
+    val bigSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 34f)
+    val nextSize = (bigSize * 0.5f).coerceIn(11f, 16f)
 
     Column(
         modifier = GlanceModifier
@@ -700,61 +538,113 @@ private fun WideContent(ui: Ui) {
             .clickable(actionRunCallback<RefreshAction>()),
         verticalAlignment = Alignment.Top,
     ) {
-        Header(ui, c, if (h >= 150f) 19f else 17f, showIcon = true, showSwitch = !both)
-        if (showBig) {
-            val cur = ui.current
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (cur != null) {
-                    Text(
-                        text = cur.from + "–" + cur.to,
-                        maxLines = 1,
-                        style = TextStyle(
-                            color = cur.color(c),
-                            fontSize = bigSize.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                } else if (ui.message != null) {
-                    Text(
-                        text = ui.message,
-                        maxLines = 1,
-                        style = TextStyle(
-                            color = if (ui.messageOn) c.on else c.muted,
-                            fontSize = (bigSize * 0.7f).sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                }
-                Spacer(modifier = GlanceModifier.width(8.dp))
-                Text(text = ui.updated, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 10.sp))
+        CardHeader(ui, c, nameSize, group, chipOnTop)
+        if (showUpdated) {
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = ui.updated,
+                    maxLines = 1,
+                    modifier = GlanceModifier.defaultWeight(),
+                    style = TextStyle(color = c.muted, fontSize = 10.sp),
+                )
+                if (chipOnUpdatedRow) DayChip(ui, c)
             }
-        } else {
-            Text(text = ui.updated, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 10.sp))
         }
-        Spacer(modifier = GlanceModifier.height(gap.dp))
+        Spacer(modifier = GlanceModifier.defaultWeight())
 
-        if (!both) {
-            val day = oneDay
-            // The periods fill what is left between the header and the graph, centred in it.
-            Box(
-                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                if (day != null) PeriodGrid(day, fit.perRow, fit.font, 8, c)
+        if (showTomorrow && day != null) {
+            val perRow = minOf(if (wide) 4 else if (w >= 170f) 2 else 1, day.lines.size).coerceAtLeast(1)
+            val font = (((inner / perRow) - 8f) / 5.4f).coerceIn(11f, 20f)
+            val rows = (free / (font * 1.4f)).toInt().coerceIn(1, 8)
+            PeriodGrid(day, perRow, font, rows, c)
+        } else if (cur == null) {
+            if (ui.message != null) {
+                Text(
+                    text = ui.message,
+                    style = TextStyle(
+                        color = if (ui.messageOn) c.on else c.muted,
+                        fontSize = (bigSize * 0.75f).coerceIn(13f, 22f).sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
             }
-            if (day != null) GraphRow(day, labelWidth, c, pill)
+        } else if (nextBeside) {
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                BigPeriod(cur, bigSize, c)
+                Spacer(modifier = GlanceModifier.defaultWeight())
+                NextText(ui, nextSize, c)
+            }
         } else {
-            for (day in listOf(today, tomorrow)) {
-                if (day != null) {
-                    // One container per day keeps the root within Glance's limit of 10 children.
-                    Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = gap.dp)) {
-                        PeriodGrid(day, perRowOf(day), fBoth, 4, c)
-                        Spacer(modifier = GlanceModifier.height(2.dp))
-                        GraphRow(day, labelWidth, c, pillLarge)
-                    }
-                }
+            Column {
+                BigPeriod(cur, bigSize, c)
+                if (hasNext) NextText(ui, nextSize, c)
             }
         }
+
+        Spacer(modifier = GlanceModifier.defaultWeight())
+        if (showGraph && day != null) {
+            val hPad = (inner / 48f * 0.2f).coerceIn(0.2f, 0.7f)
+            GraphRow(day, c, pill, hPad)
+        }
+    }
+}
+
+@Composable
+private fun BigPeriod(line: Line, size: Float, c: Colors) {
+    Text(
+        text = line.from + "–" + line.to,
+        maxLines = 1,
+        style = TextStyle(color = line.color(c), fontSize = size.sp, fontWeight = FontWeight.Bold),
+    )
+}
+
+@Composable
+private fun NextText(ui: Ui, size: Float, c: Colors) {
+    val next = ui.next ?: return
+    Text(
+        text = ui.nextText,
+        maxLines = 1,
+        style = TextStyle(color = next.color(c), fontSize = size.sp),
+    )
+}
+
+/** Name (opens the app on this place), then the queue, then the day switch when it is not on the next row. */
+@Composable
+private fun CardHeader(ui: Ui, c: Colors, nameSize: Float, group: String?, showChip: Boolean) {
+    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = ui.name,
+            maxLines = 1,
+            modifier = GlanceModifier.defaultWeight().clickable(openPlace(ui)),
+            style = TextStyle(color = c.text, fontSize = nameSize.sp, fontWeight = FontWeight.Bold),
+        )
+        if (group != null) {
+            Spacer(modifier = GlanceModifier.width(6.dp))
+            Text(text = group, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 11.sp))
+        }
+        if (showChip) {
+            Spacer(modifier = GlanceModifier.width(6.dp))
+            DayChip(ui, c)
+        }
+    }
+}
+
+/** "Tomorrow ›" / "‹ Today": flips the widget between the two days. */
+@Composable
+private fun DayChip(ui: Ui, c: Colors) {
+    if (ui.days.size < 2) return
+    Box(
+        modifier = GlanceModifier
+            .background(c.chip)
+            .cornerRadius(12.dp)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clickable(actionRunCallback<ToggleDayAction>()),
+    ) {
+        Text(
+            text = if (ui.showTomorrow) "‹ " + ui.days[0].label else ui.days[1].label + " ›",
+            maxLines = 1,
+            style = TextStyle(color = c.text, fontSize = 11.sp, fontWeight = FontWeight.Medium),
+        )
     }
 }
 
@@ -791,23 +681,15 @@ private fun PeriodGrid(day: DayView, perRow: Int, fontSize: Float, maxRows: Int,
     }
 }
 
-/** A day label on the left and the 48 pills beside it, across the full width; hours 0, 6, 12, 18 below. */
+/** The 48 pills across the full width with the hours 0, 6, 12, 18 below, as on the cards of the app. */
 @Composable
-private fun GraphRow(day: DayView, labelWidth: Float, c: Colors, pillHeight: Float) {
+private fun GraphRow(day: DayView, c: Colors, pillHeight: Float, hPad: Float) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = GlanceModifier.width(labelWidth.dp)) {
-                Text(text = day.label, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 9.sp))
-            }
-            PillRow(day, pillHeight, c, GlanceModifier.defaultWeight())
-        }
+        PillRow(day, pillHeight, c, GlanceModifier.fillMaxWidth(), hPad)
         Row(modifier = GlanceModifier.fillMaxWidth()) {
-            Spacer(modifier = GlanceModifier.width(labelWidth.dp))
-            Row(modifier = GlanceModifier.defaultWeight()) {
-                for (label in listOf("0", "6", "12", "18")) {
-                    Box(modifier = GlanceModifier.defaultWeight()) {
-                        Text(text = label, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 9.sp))
-                    }
+            for (label in listOf("0", "6", "12", "18")) {
+                Box(modifier = GlanceModifier.defaultWeight()) {
+                    Text(text = label, maxLines = 1, style = TextStyle(color = c.muted, fontSize = 9.sp))
                 }
             }
         }
@@ -819,7 +701,7 @@ private fun GraphRow(day: DayView, labelWidth: Float, c: Colors, pillHeight: Flo
  * Every pill takes an equal share of whatever width the widget really has.
  */
 @Composable
-private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModifier) {
+private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModifier, hPad: Float = 0.6f) {
     Row(modifier = modifier) {
         for (group in 0 until 6) {
             Row(modifier = GlanceModifier.defaultWeight()) {
@@ -840,7 +722,7 @@ private fun PillRow(day: DayView, height: Float, c: Colors, modifier: GlanceModi
                         else -> 0.65f
                     }
                     Box(
-                        modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = 0.6.dp),
+                        modifier = GlanceModifier.defaultWeight().height(height.dp).padding(horizontal = hPad.dp),
                         contentAlignment = Alignment.BottomCenter,
                     ) {
                         Spacer(
