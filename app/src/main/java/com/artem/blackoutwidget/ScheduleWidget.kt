@@ -342,7 +342,8 @@ private fun TinyContent(ui: Ui) {
     val capacity = (avail / blockH).toInt().coerceIn(1, 8)
 
     val day = ui.days.getOrNull(0)
-    val start = day?.currentIndex?.takeIf { it >= 0 } ?: 0
+    // The list starts at the current period, or at the first one when the whole day fits.
+    val start = if (day != null && day.lines.size <= capacity) 0 else day?.currentIndex?.takeIf { it >= 0 } ?: 0
     val lines: List<Line> = when {
         ui.current == null -> emptyList()
         day != null && day.currentIndex >= 0 -> day.lines.drop(start).take(capacity)
@@ -372,7 +373,7 @@ private fun TinyContent(ui: Ui) {
             for ((i, line) in lines.withIndex()) {
                 val style = TextStyle(
                     color = line.color(c),
-                    fontSize = (if (i == 0) font else font * 0.88f).sp,
+                    fontSize = (if (start + i == day?.currentIndex || (day == null && i == 0)) font else font * 0.88f).sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Column(
@@ -501,6 +502,7 @@ private fun CardContent(ui: Ui) {
     val day = if (showTomorrow) tomorrowDay else today
 
     val nameSize = when {
+        h >= 250f -> 22f
         h >= 150f -> 20f
         h >= 110f -> 17f
         else -> 15f
@@ -514,7 +516,14 @@ private fun CardContent(ui: Ui) {
         else -> ui.group
     }?.takeIf { it.isNotEmpty() }
     val showGraph = day != null && (w >= 140f || h >= 150f)
-    val pill = if (h >= 150f) 20f else 16f
+    // The pills grow with the height, so a tall widget is not left with a thin strip.
+    val pill = when {
+        h >= 300f -> 34f
+        h >= 220f -> 28f
+        h >= 170f -> 22f
+        h >= 150f -> 20f
+        else -> 16f
+    }
 
     val headerH = nameSize * 1.3f + (if (showUpdated) (if (chipOnUpdatedRow) 22f else 13f) else 0f)
     val graphH = if (showGraph) pill + 12f + 4f else 0f
@@ -522,12 +531,27 @@ private fun CardContent(ui: Ui) {
 
     val cur = ui.current
     val hasNext = cur != null && ui.next != null
-    val nextBeside = wide && hasNext
-    val nextBelowH = if (hasNext && !nextBeside) 13f * 1.3f + 2f else 0f
+    // The next period goes under the current one; only a wide widget too low for that puts it beside.
+    val nextH = if (hasNext) 13f * 1.3f + 2f else 0f
+    val fullWidthSize = minOf(inner / 5.6f * ui.textScale, 44f).coerceAtLeast(12f)
+    val nextBeside = wide && hasNext && free < fullWidthSize * 1.25f + nextH
+    val nextBelowH = if (hasNext && !nextBeside) nextH else 0f
     val fitHeight = (free - nextBelowH) / 1.25f
     val fitWidth = (if (nextBeside) inner * 0.58f else inner) / 5.6f
-    val bigSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 34f)
-    val nextSize = (bigSize * 0.5f).coerceIn(11f, 16f)
+    val bigSize = minOf(fitWidth * ui.textScale, maxOf(fitHeight, 12f)).coerceIn(12f, 44f)
+    val nextSize = (bigSize * 0.5f).coerceIn(11f, 18f)
+
+    // What is left of the height goes to the periods that follow the next one, as many as fit.
+    val rest = if (!showTomorrow && today != null && today.currentIndex >= 0 && cur != null) {
+        today.lines.drop(today.currentIndex + 2)
+    } else {
+        emptyList()
+    }
+    val restPerRow = minOf(if (wide) 4 else if (w >= 170f) 2 else 1, rest.size).coerceAtLeast(1)
+    val restFont = (((inner / restPerRow) - 8f) / 5.4f).coerceIn(11f, 16f)
+    val leftover = free - (bigSize * 1.25f + nextBelowH) - 8f
+    val restRows = minOf((leftover / (restFont * 1.4f)).toInt(), (rest.size + restPerRow - 1) / restPerRow)
+        .coerceAtMost(8)
 
     Column(
         modifier = GlanceModifier
@@ -575,9 +599,13 @@ private fun CardContent(ui: Ui) {
                 NextText(ui, nextSize, c)
             }
         } else {
-            Column {
+            Column(modifier = GlanceModifier.fillMaxWidth()) {
                 BigPeriod(cur, bigSize, c)
                 if (hasNext) NextText(ui, nextSize, c)
+                if (restRows >= 1 && today != null) {
+                    Spacer(modifier = GlanceModifier.height(8.dp))
+                    PeriodGrid(DayView(today.label, rest, today.slots, today.nowSlot, -1, today.emergency), restPerRow, restFont, restRows, c)
+                }
             }
         }
 
