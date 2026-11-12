@@ -28,6 +28,8 @@ data class Cache(
     val group: String,
     val days: Map<LocalDate, Map<Int, String>>,
     val emergency: Emergency? = null,
+    /** The group is the neighbours' one, not DTEK's answer for the house itself. */
+    val approxGroup: Boolean = false,
 )
 
 object ScheduleLogic {

@@ -40,6 +40,12 @@ data class Place(
     val manualGroup: String = "",
     /** Queue found from the address (when the address was checked or fetched). */
     val detectedGroup: String = "",
+    /**
+     * The queue of the neighbouring houses, for an address DTEK has no queue for. Not empty = the person
+     * chose to see that queue's schedule (marked as approximate) together with the address's own
+     * emergency outages.
+     */
+    val neighborGroup: String = "",
     /** Whether the notification options (changes, reminders) apply to this place. */
     val notify: Boolean = true,
 ) {
@@ -54,7 +60,7 @@ data class Place(
         get() = if (byGroup) {
             GroupUtil.normalizeGroup(manualGroup) != null
         } else {
-            usesAddress || detectedGroup.isNotBlank()
+            usesAddress || detectedGroup.isNotBlank() || neighborGroup.isNotBlank()
         }
 
     /** The queue in use right now, if it is known: "GPV6.2". */
@@ -78,6 +84,7 @@ object PlaceJson {
                     .put("byGroup", p.byGroup)
                     .put("manualGroup", p.manualGroup)
                     .put("detectedGroup", p.detectedGroup)
+                    .put("neighborGroup", p.neighborGroup)
                     .put("notify", p.notify),
             )
         }
@@ -103,6 +110,7 @@ object PlaceJson {
                     byGroup = o.optBoolean("byGroup", d.byGroup),
                     manualGroup = o.optString("manualGroup", d.manualGroup),
                     detectedGroup = o.optString("detectedGroup", d.detectedGroup),
+                    neighborGroup = o.optString("neighborGroup", d.neighborGroup),
                     notify = o.optBoolean("notify", d.notify),
                 ),
             )

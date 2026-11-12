@@ -85,6 +85,14 @@ object Refresher {
         }
         // Never fall back to an old detected group when the user picked a queue by hand.
         if (group == null && !place.byGroup) group = place.detectedGroup.ifBlank { null }
+        // No queue of its own: the neighbours' queue, if the person chose it. It is read from today's
+        // house list when possible, so it follows DTEK, and the saved one is the fallback.
+        var approx = false
+        if (group == null && place.usesAddress && place.neighborGroup.isNotBlank()) {
+            val live = home?.let { AddressValidator.streetGroup(AddressParsing.parseHouses(it)) }
+            group = live ?: GroupUtil.normalizeGroup(place.neighborGroup)
+            approx = group != null
+        }
         if (group == null) {
             // During an emergency outage DTEK names no group for most houses. The outage itself is still
             // worth showing: an all-day-on baseline with the emergency laid over it, until a group is known.
@@ -105,7 +113,7 @@ object Refresher {
         // An emergency outage at the address (only known for places found by address) overrides the schedule.
         val emergency = if (place.usesAddress && home != null) FactParser.emergencyForHouse(home, place.house, now) else null
         val days = if (emergency != null) ScheduleLogic.overlayEmergency(planned, emergency) else planned
-        return Cache(now, FactParser.updateStamp(raw.fact), group, days, emergency)
+        return Cache(now, FactParser.updateStamp(raw.fact), group, days, emergency, approx)
     }
 
     /** Notifies about changes against the previous download of this place. */

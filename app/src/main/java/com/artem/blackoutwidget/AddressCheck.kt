@@ -114,8 +114,10 @@ object AddressValidator {
                     val match = lookup.houses.firstOrNull { FactParser.normalizeHouse(it.number) == wanted }
                     when {
                         match == null -> result(AddressState.HOUSE_UNKNOWN, canonCity, canonStreet, suggested = streetGroup(lookup.houses))
-                        match.group == null && match.emergency ->
-                            result(AddressState.EMERGENCY_NO_GROUP, canonCity, canonStreet, match.number)
+                        match.group == null && match.emergency -> result(
+                            AddressState.EMERGENCY_NO_GROUP, canonCity, canonStreet, match.number,
+                            suggested = streetGroup(lookup.houses),
+                        )
                         match.group == null -> result(
                             AddressState.NO_GROUP, canonCity, canonStreet, match.number,
                             suggested = streetGroup(lookup.houses),

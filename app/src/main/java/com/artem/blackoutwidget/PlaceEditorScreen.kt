@@ -59,6 +59,7 @@ fun PlaceEditorScreen(
     var byGroup by rememberSaveable(placeId) { mutableStateOf(initial.byGroup) }
     var group by rememberSaveable(placeId) { mutableStateOf(initial.manualGroup) }
     var notify by rememberSaveable(placeId) { mutableStateOf(initial.notify) }
+    var useNeighbor by rememberSaveable(placeId) { mutableStateOf(initial.neighborGroup.isNotBlank()) }
     var regionId by rememberSaveable(placeId) { mutableStateOf(initial.regionId) }
     val region = DtekRegion.byId(regionId)
     // Switching region starts the address over: streets and queues belong to one DTEK network.
@@ -78,8 +79,16 @@ fun PlaceEditorScreen(
     /** The place as it will be stored: DTEK's spelling when the address was checked, the old one otherwise. */
     fun current(): Place {
         val c = addressCheck
-        val checked = if (!byGroup && c != null && c.canSave) c else null
+        val neighborOk = useNeighbor && c?.suggestedGroup != null
+        val checked = if (!byGroup && c != null && (c.canSave || neighborOk)) c else null
+        // The neighbours' queue goes with an address DTEK has no queue for; an own queue always wins.
+        val neighbor = when {
+            byGroup || !useNeighbor -> ""
+            c?.state == AddressState.FOUND -> ""
+            else -> c?.suggestedGroup ?: initial.neighborGroup
+        }
         return initial.copy(
+            neighborGroup = neighbor,
             name = name.trim(),
             regionId = regionId,
             city = checked?.city ?: if (sameRegion) initial.city else region.defaultCity,
@@ -112,7 +121,7 @@ fun PlaceEditorScreen(
     val canSave = !busy && if (byGroup) {
         GroupUtil.normalizeGroup(group) != null
     } else {
-        addressCheck?.canSave == true
+        addressCheck?.canSave == true || (useNeighbor && addressCheck?.suggestedGroup != null)
     }
 
     Column(
@@ -184,6 +193,8 @@ fun PlaceEditorScreen(
                         initialHouse = if (sameRegion) initial.house else "",
                         initialGroup = if (sameRegion) initial.detectedGroup else "",
                         onCheck = { addressCheck = it },
+                        useNeighbor = useNeighbor,
+                        onUseNeighbor = { useNeighbor = it },
                         onUseGroup = { group = it; byGroup = true },
                     )
                 }

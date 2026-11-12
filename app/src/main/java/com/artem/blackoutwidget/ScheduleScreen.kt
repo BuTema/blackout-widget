@@ -190,7 +190,7 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
                         val group = (cache?.group ?: "").removePrefix("GPV")
                         if (group.isNotBlank()) {
                             Text(
-                                stringResource(R.string.group_in_use, group),
+                                stringResource(if (cache?.approxGroup == true) R.string.group_approx else R.string.group_in_use, group),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                             )

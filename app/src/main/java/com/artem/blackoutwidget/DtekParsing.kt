@@ -110,6 +110,7 @@ object CacheJson {
             .put("dtekUpdate", c.dtekUpdate)
             .put("group", c.group)
             .put("days", days)
+            .put("approx", c.approxGroup)
             .also { json ->
                 c.emergency?.let {
                     json.put("emergency", JSONObject().put("start", it.startMillis).put("end", it.endMillis).put("reason", it.reason))
@@ -131,6 +132,6 @@ object CacheJson {
         val emergency = o.optJSONObject("emergency")?.let {
             Emergency(it.getLong("start"), it.getLong("end"), it.optString("reason", ""))
         }
-        return Cache(o.getLong("updated"), o.optString("dtekUpdate", ""), o.getString("group"), days, emergency)
+        return Cache(o.getLong("updated"), o.optString("dtekUpdate", ""), o.getString("group"), days, emergency, o.optBoolean("approx", false))
     }
 }

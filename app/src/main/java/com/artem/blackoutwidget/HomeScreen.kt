@@ -305,7 +305,7 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
                 val group = (cache?.group ?: place.knownGroup ?: "").removePrefix("GPV")
                 if (group.isNotBlank()) {
                     Text(
-                        stringResource(R.string.group_in_use, group),
+                        stringResource(if (cache?.approxGroup == true) R.string.group_approx else R.string.group_in_use, group),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +49,8 @@ fun AddressPicker(
     initialHouse: String,
     initialGroup: String,
     onCheck: (AddressCheck) -> Unit,
+    useNeighbor: Boolean,
+    onUseNeighbor: (Boolean) -> Unit,
     onUseGroup: (String) -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -154,12 +157,12 @@ fun AddressPicker(
             onFocus = { interacted = true },
             imeAction = ImeAction.Done,
         )
-        StatusLine(check, onUseGroup)
+        StatusLine(check, useNeighbor, onUseNeighbor, onUseGroup)
     }
 }
 
 @Composable
-private fun StatusLine(check: AddressCheck, onUseGroup: (String) -> Unit) {
+private fun StatusLine(check: AddressCheck, useNeighbor: Boolean, onUseNeighbor: (Boolean) -> Unit, onUseGroup: (String) -> Unit) {
     val group = check.group?.removePrefix("GPV").orEmpty()
     val error = MaterialTheme.colorScheme.error
     val good = MaterialTheme.colorScheme.primary
@@ -191,6 +194,13 @@ private fun StatusLine(check: AddressCheck, onUseGroup: (String) -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = muted,
             )
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { onUseNeighbor(!useNeighbor) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = useNeighbor, onCheckedChange = onUseNeighbor)
+                Text(stringResource(R.string.addr_use_neighbor, suggested), style = MaterialTheme.typography.bodyMedium)
+            }
             TextButton(onClick = { onUseGroup(suggested) }) {
                 Text(stringResource(R.string.addr_use_group, suggested))
             }
