@@ -15,7 +15,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +50,6 @@ fun AddressPicker(
     onCheck: (AddressCheck) -> Unit,
     useNeighbor: Boolean,
     onUseNeighbor: (Boolean) -> Unit,
-    onUseGroup: (String) -> Unit,
 ) {
     val ctx = LocalContext.current
     var city by remember { mutableStateOf(initialCity) }
@@ -157,12 +155,12 @@ fun AddressPicker(
             onFocus = { interacted = true },
             imeAction = ImeAction.Done,
         )
-        StatusLine(check, useNeighbor, onUseNeighbor, onUseGroup)
+        StatusLine(check, useNeighbor, onUseNeighbor)
     }
 }
 
 @Composable
-private fun StatusLine(check: AddressCheck, useNeighbor: Boolean, onUseNeighbor: (Boolean) -> Unit, onUseGroup: (String) -> Unit) {
+private fun StatusLine(check: AddressCheck, useNeighbor: Boolean, onUseNeighbor: (Boolean) -> Unit) {
     val group = check.group?.removePrefix("GPV").orEmpty()
     val error = MaterialTheme.colorScheme.error
     val good = MaterialTheme.colorScheme.primary
@@ -200,9 +198,6 @@ private fun StatusLine(check: AddressCheck, useNeighbor: Boolean, onUseNeighbor:
             ) {
                 Checkbox(checked = useNeighbor, onCheckedChange = onUseNeighbor)
                 Text(stringResource(R.string.addr_use_neighbor, suggested), style = MaterialTheme.typography.bodyMedium)
-            }
-            TextButton(onClick = { onUseGroup(suggested) }) {
-                Text(stringResource(R.string.addr_use_group, suggested))
             }
         }
     }

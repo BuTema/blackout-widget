@@ -1,9 +1,11 @@
 package com.artem.blackoutwidget
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -151,7 +153,7 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
         val target = targetFor(start, dragOffset)
         settleTo = target
         scope.launch {
-            animate(dragOffset, distanceTo(start, target), animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ ->
+            animate(dragOffset, distanceTo(start, target), animationSpec = tween(170, easing = FastOutSlowInEasing)) { value, _ ->
                 dragOffset = value
             }
             // Order, offsets and "in the hand" change together, so nothing jumps.
@@ -225,7 +227,13 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
                         else -> 0f
                     }
                     val slide by animateFloatAsState(shiftTarget, spring(stiffness = Spring.StiffnessMedium), label = "slide")
-                    val lift by animateFloatAsState(if (dragged) 1.04f else 1f, spring(stiffness = Spring.StiffnessMedium), label = "lift")
+                    // Picked up: grows quickly. Let go: shrinks smoothly while the card settles into its place.
+                    val raised = dragged && settleTo == null
+                    val lift by animateFloatAsState(
+                        if (raised) 1.04f else 1f,
+                        if (raised) tween(140, easing = FastOutSlowInEasing) else tween(280, easing = FastOutSlowInEasing),
+                        label = "lift",
+                    )
                     PlaceCard(
                         row = row,
                         now = now,
@@ -287,10 +295,7 @@ private fun PlaceCard(row: PlaceRow, now: LocalDateTime, dragged: Boolean, modif
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = if (dragged) 16.dp else 1.dp),
-        // Picked up: a lighter card with a clear outline.
-        colors = CardDefaults.cardColors(
-            containerColor = if (dragged) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerHighest,
-        ),
+        // Picked up: an outline and a shadow, no change of colour.
         border = if (dragged) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

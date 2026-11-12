@@ -69,7 +69,6 @@ fun PlaceEditorScreen(
     var stored by remember(placeId) { mutableStateOf(existing != null) }
     var status by remember(placeId) { mutableStateOf(Prefs.loadStatus(ctx, placeId)) }
     var cache by remember(placeId) { mutableStateOf(Prefs.loadCache(ctx, placeId)) }
-    var busy by remember { mutableStateOf(false) }
     var askDelete by remember { mutableStateOf(false) }
 
     // One hidden DTEK page shared by all address lookups while this screen is open.
@@ -101,24 +100,7 @@ fun PlaceEditorScreen(
         )
     }
 
-    // While a refresh runs, poll the stored result so the status line updates by itself.
-    LaunchedEffect(busy) {
-        if (!busy) return@LaunchedEffect
-        val startedAt = System.currentTimeMillis()
-        while (true) {
-            delay(1000)
-            val s = Prefs.loadStatus(ctx, placeId)
-            if (s.lastAttemptMillis >= startedAt) {
-                status = s
-                cache = Prefs.loadCache(ctx, placeId)
-                detected = Prefs.place(ctx, placeId)?.detectedGroup ?: detected
-                busy = false
-                break
-            }
-        }
-    }
-
-    val canSave = !busy && if (byGroup) {
+    val canSave = if (byGroup) {
         GroupUtil.normalizeGroup(group) != null
     } else {
         addressCheck?.canSave == true || (useNeighbor && addressCheck?.suggestedGroup != null)
@@ -195,7 +177,6 @@ fun PlaceEditorScreen(
                         onCheck = { addressCheck = it },
                         useNeighbor = useNeighbor,
                         onUseNeighbor = { useNeighbor = it },
-                        onUseGroup = { group = it; byGroup = true },
                     )
                 }
             }
@@ -209,14 +190,16 @@ fun PlaceEditorScreen(
                     stored = true
                     detected = saved.detectedGroup
                     onSaved(saved.id)
+                    // The download runs in the background (it outlives this screen); the screen closes now
+                    // and the new schedule appears by itself when it arrives.
                     Scheduler.ensure(ctx)
-                    busy = true
-                    scope.launch { Refresher.refresh(ctx) }
+                    Scheduler.refreshNow(ctx)
+                    onBack()
                 },
             ) {
-                Text(stringResource(if (busy) R.string.refreshing else R.string.save_and_refresh))
+                Text(stringResource(R.string.save_and_refresh))
             }
-            if (!canSave && !busy) {
+            if (!canSave) {
                 Text(
                     stringResource(R.string.save_disabled_hint),
                     style = MaterialTheme.typography.bodySmall,

@@ -285,7 +285,7 @@ private fun DayTab(title: String, date: String, selected: Boolean, modifier: Mod
     ) {
         Text(title, color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.width(8.dp))
-        Text(date, color = foreground, fontSize = 13.sp)
+        Text(date, color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }
 
