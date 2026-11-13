@@ -4,14 +4,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/preview_bg"
     android:orientation="vertical"
-    android:padding="4dp">
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/preview_name" android:textColor="#FF8E8E93" android:textSize="11sp" android:textStyle="bold" android:layout_gravity="center_horizontal" />
-<View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="09:30" android:textColor="#FFFF9F0A" android:textSize="15sp" android:textStyle="bold" android:layout_gravity="center_horizontal" />
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="16:00" android:textColor="#FFFF9F0A" android:textSize="15sp" android:textStyle="bold" android:layout_gravity="center_horizontal" android:paddingBottom="6dp" />
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="16:00" android:textColor="#FFB0B0B5" android:textSize="13sp" android:textStyle="bold" android:layout_gravity="center_horizontal" />
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="20:00" android:textColor="#FFB0B0B5" android:textSize="13sp" android:textStyle="bold" android:layout_gravity="center_horizontal" android:paddingBottom="6dp" />
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="20:00" android:textColor="#FFFF9F0A" android:textSize="13sp" android:textStyle="bold" android:layout_gravity="center_horizontal" />
-<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="22:00" android:textColor="#FFFF9F0A" android:textSize="13sp" android:textStyle="bold" android:layout_gravity="center_horizontal" />
-<View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+    android:padding="3dp">
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/preview_name" android:textColor="#FF8E8E93" android:textSize="8sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" />
+<FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="09:30" android:textColor="#FFFF9F0A" android:textSize="10sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="16:00" android:textColor="#FFFF9F0A" android:textSize="10sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" android:paddingBottom="3dp" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="16:00" android:textColor="#FFB0B0B5" android:textSize="9sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="20:00" android:textColor="#FFB0B0B5" android:textSize="9sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" android:paddingBottom="3dp" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="20:00" android:textColor="#FFFF9F0A" android:textSize="9sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="22:00" android:textColor="#FFFF9F0A" android:textSize="9sp" android:singleLine="true" android:textStyle="bold" android:layout_gravity="center_horizontal" />
+<FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 </LinearLayout>

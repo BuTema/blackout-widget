@@ -559,9 +559,10 @@ private fun CardContent(ui: Ui) {
     // Plan for one column: the current period as large as the width allows, but leaving room for two more.
     fun plan(colWidth: Float, secondColumn: Boolean): CardPlan {
         val want = minOf(2, upcoming.size)
-        val fitHeight = (free - want * 13f * rowK) / 1.25f
+        // The following periods have one size, so the room kept for them is exactly what they take.
+        val next = if (secondColumn) minOf(14f, colWidth / 5.3f).coerceAtLeast(10f) else 14f
+        val fitHeight = (free - want * next * rowK) / 1.25f
         val big = minOf(colWidth / 5.6f * scale, maxOf(fitHeight, 12f)).coerceIn(12f, 44f)
-        val next = minOf((big * 0.5f).coerceIn(11f, 16f), if (secondColumn) colWidth / 5.3f else 16f).coerceAtLeast(10f)
         val rows = ((free - big * 1.25f) / (next * rowK)).toInt().coerceAtLeast(0)
         if (!secondColumn) return CardPlan(big, next, colWidth, upcoming.take(rows), emptyList())
         val rows2 = (free / (next * rowK)).toInt().coerceAtLeast(0)
