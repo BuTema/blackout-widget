@@ -137,4 +137,11 @@
     <string name="addr_use_neighbor">Show this house\'s emergency outages and the schedule of the nearest queue %1$s</string>
     <string name="group_approx_short">Queue: %1$s (≈)</string>
     <string name="group_approx">Queue: %1$s (nearest, from neighbouring houses)</string>
+    <string name="preview_name">Home</string>
+    <string name="preview_updated">Updated at 12:00</string>
+    <string name="preview_group">Queue: 6.2</string>
+    <string name="widget_label_2x2">Schedule 2×2</string>
+    <string name="widget_label_1x2">Column 1×2</string>
+    <string name="widget_label_4x1">Strip 4×1</string>
+    <string name="widget_label_4x2">Card 4×2</string>
 </resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/preview_bg"
+    android:orientation="vertical"
+    android:padding="10dp">
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/preview_name" android:textColor="#FFFFFFFF" android:textSize="16sp" android:textStyle="bold" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/preview_updated" android:textColor="#FF8E8E93" android:textSize="9sp" />
+<View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="09:30–16:00" android:textColor="#FFFF9F0A" android:textSize="20sp" android:textStyle="bold" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="16:00–20:00" android:textColor="#FFB0B0B5" android:textSize="13sp" />
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="20:00–22:00" android:textColor="#FFFF9F0A" android:textSize="13sp" />
+<View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+<ImageView android:layout_width="match_parent" android:layout_height="wrap_content" android:adjustViewBounds="true" android:scaleType="fitXY" android:src="@drawable/preview_pills" />
+</LinearLayout>

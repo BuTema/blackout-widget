@@ -41,13 +41,50 @@
 
         <receiver
             android:name=".ScheduleWidgetReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_label_2x2">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/schedule_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".NarrowWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_1x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_1x2" />
+        </receiver>
+
+        <receiver
+            android:name=".StripWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_4x1">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_4x1" />
+        </receiver>
+
+        <receiver
+            android:name=".WideWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_4x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_4x2" />
         </receiver>
 
         <receiver

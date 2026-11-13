@@ -137,4 +137,11 @@
     <string name="addr_use_neighbor">Показувати і аварійні відключення цього будинку, і графік найближчої черги %1$s</string>
     <string name="group_approx_short">Черга: %1$s (≈)</string>
     <string name="group_approx">Черга: %1$s (найближча, за сусідніми будинками)</string>
+    <string name="preview_name">Дім</string>
+    <string name="preview_updated">Оновлено о 12:00</string>
+    <string name="preview_group">Черга: 6.2</string>
+    <string name="widget_label_2x2">Графік 2×2</string>
+    <string name="widget_label_1x2">Колонка 1×2</string>
+    <string name="widget_label_4x1">Смужка 4×1</string>
+    <string name="widget_label_4x2">Картка 4×2</string>
 </resources>
