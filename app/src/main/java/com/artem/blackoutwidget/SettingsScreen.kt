@@ -188,6 +188,25 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             }
 
+            // Reminders at the exact minute need the "alarms & reminders" permission; without it they are a few minutes late.
+            val alarms = ctx.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+            val inexact = permissionTick >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                (remindOff || remindOn) && !alarms.canScheduleExactAlarms()
+            if (inexact) {
+                Text(stringResource(R.string.exact_alarm_hint), style = MaterialTheme.typography.bodyMedium)
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        ctx.startActivity(
+                            Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                .setData(android.net.Uri.parse("package:" + ctx.packageName)),
+                        )
+                    },
+                ) {
+                    Text(stringResource(R.string.exact_alarm_allow))
+                }
+            }
+
             val testSent = stringResource(R.string.notif_test_sent)
             val testBlocked = stringResource(R.string.notif_blocked)
             OutlinedButton(

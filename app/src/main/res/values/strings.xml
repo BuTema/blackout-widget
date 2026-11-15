@@ -144,4 +144,6 @@
     <string name="widget_label_1x2">Column 1×2</string>
     <string name="widget_label_4x1">Strip 4×1</string>
     <string name="widget_label_4x2">Card 4×2</string>
+    <string name="exact_alarm_hint">Reminders can be a few minutes late until you allow exact alarms for the app.</string>
+    <string name="exact_alarm_allow">Allow exact alarms</string>
 </resources>

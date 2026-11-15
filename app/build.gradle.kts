@@ -6,27 +6,45 @@ plugins {
 
 android {
     namespace = "com.artem.blackoutwidget"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.artem.blackoutwidget"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
+        targetSdk = 36
+        // Google Play wants a higher versionCode for every upload; CI builds number themselves.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionName = "1.0"
-        // Only the two languages the app has; libraries ship strings for dozens of others.
-        resourceConfigurations += listOf("en", "uk")
     }
 
     // A fixed, public "debug" keystore is committed on purpose: every CI build is signed with the
-    // same key, so a new APK installs over the previous one without uninstalling. This is a
-    // sideload-only app; it holds no secrets.
+    // same key, so a new APK installs over the previous one without uninstalling. The app holds no secrets.
     signingConfigs {
         getByName("debug") {
             storeFile = file("debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+        }
+    }
+
+    // Only the two languages the app has; libraries ship strings for dozens of others.
+    androidResources {
+        localeFilters += listOf("en", "uk")
+    }
+
+    // The key that signs what is uploaded to Google Play. Its file and passwords come from the build
+    // environment (GitHub secrets) and are never committed; without them the release build is signed
+    // with the public debug key above, as before.
+    val uploadStore = System.getenv("UPLOAD_KEYSTORE_FILE")
+    if (uploadStore != null) {
+        signingConfigs {
+            create("upload") {
+                storeFile = file(uploadStore)
+                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("UPLOAD_KEY_ALIAS")
+                keyPassword = System.getenv("UPLOAD_KEY_PASSWORD")
+            }
         }
     }
 
@@ -37,7 +55,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (uploadStore != null) "upload" else "debug")
         }
     }
 

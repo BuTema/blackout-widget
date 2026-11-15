@@ -5,11 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Reminders must arrive on time. On Android 12 this permission is granted by default; from 13 on,
-         USE_EXACT_ALARM is granted at install. (That one is restricted on Google Play to alarm and
-         calendar apps; this app is distributed by sideloading only.) -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Reminders are exact when the person allows "alarms & reminders" for the app (Settings offers the
+         shortcut); without it they are a few minutes late. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="false"

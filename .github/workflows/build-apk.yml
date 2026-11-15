@@ -36,6 +36,32 @@ jobs:
       - name: Build APKs (small release build and a plain debug one)
         run: ./gradlew assembleRelease assembleDebug
 
+      # The Google Play bundle is signed with the upload key from the repository secrets
+      # (UPLOAD_KEYSTORE_B64, UPLOAD_KEYSTORE_PASSWORD, UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD).
+      # Without them this step does nothing; the sideload APKs above never use that key.
+      - name: Build the Google Play bundle (.aab)
+        env:
+          UPLOAD_KEYSTORE_B64: ${{ secrets.UPLOAD_KEYSTORE_B64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$UPLOAD_KEYSTORE_B64" ]; then
+            echo "No upload key in the secrets; skipping the bundle."
+            exit 0
+          fi
+          echo "$UPLOAD_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          ./gradlew bundleRelease
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: Upload the Google Play bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackout-widget-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:

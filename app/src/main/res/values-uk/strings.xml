@@ -144,4 +144,6 @@
     <string name="widget_label_1x2">Колонка 1×2</string>
     <string name="widget_label_4x1">Смужка 4×1</string>
     <string name="widget_label_4x2">Картка 4×2</string>
+    <string name="exact_alarm_hint">Нагадування можуть запізнюватися на кілька хвилин, доки ви не дозволите застосунку точні будильники.</string>
+    <string name="exact_alarm_allow">Дозволити точні нагадування</string>
 </resources>
