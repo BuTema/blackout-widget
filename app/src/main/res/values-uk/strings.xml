@@ -146,4 +146,10 @@
     <string name="widget_label_4x2">Картка 4×2</string>
     <string name="exact_alarm_hint">Нагадування можуть запізнюватися на кілька хвилин, доки ви не дозволите застосунку точні будильники.</string>
     <string name="exact_alarm_allow">Дозволити точні нагадування</string>
+    <string name="update_available">Доступне оновлення</string>
+    <string name="update_hint">Нова версія застосунку готова до встановлення.</string>
+    <string name="update_install">Оновити</string>
+    <string name="update_later">Пізніше</string>
+    <string name="update_downloading">Завантаження оновлення…</string>
+    <string name="update_allow">Дозвольте встановлення з цього застосунку й натисніть «Оновити» ще раз.</string>
 </resources>

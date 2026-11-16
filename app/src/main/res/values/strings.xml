@@ -146,4 +146,10 @@
     <string name="widget_label_4x2">Card 4×2</string>
     <string name="exact_alarm_hint">Reminders can be a few minutes late until you allow exact alarms for the app.</string>
     <string name="exact_alarm_allow">Allow exact alarms</string>
+    <string name="update_available">Update available</string>
+    <string name="update_hint">A new version of the app is ready to install.</string>
+    <string name="update_install">Update</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading">Downloading the update…</string>
+    <string name="update_allow">Allow installing from this app, then tap Update again.</string>
 </resources>

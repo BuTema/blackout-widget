@@ -200,6 +200,8 @@ fun HomeScreen(onOpenPlace: (String) -> Unit, onAddPlace: () -> Unit, onOpenSett
                 }
             }
 
+            UpdateBanner()
+
             if (rows.isEmpty()) {
                 Text(stringResource(R.string.places_empty), style = MaterialTheme.typography.bodyLarge)
             } else if (rows.size > 1) {

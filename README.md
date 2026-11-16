@@ -26,6 +26,12 @@ when you add a widget the app asks which one (long-press a widget to change it l
 **Add a widget for this place** in the place's editor. The size of the period times can be changed in
 Settings → Widget.
 
+## Updates
+
+The build installed from GitHub checks the **Latest build** release (at most once an hour) and shows an
+"Update available" card on the home screen; **Update** downloads the APK and opens the installer (Android asks once
+to allow installing from this app). The Google Play build has no such card: Google Play updates it.
+
 ## In the app
 
 - **Home screen**: one card per place (current period, next one, the day as 48 pills). Press and hold a card to

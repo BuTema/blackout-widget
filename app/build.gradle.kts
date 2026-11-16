@@ -15,6 +15,8 @@ android {
         // Google Play wants a higher versionCode for every upload; CI builds number themselves.
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionName = "1.0"
+        // The commit this build was made from (CI only); the sideload build compares it with the latest release.
+        buildConfigField("String", "COMMIT", "\"${System.getenv("GITHUB_SHA")?.take(7) ?: "dev"}\"")
     }
 
     // A fixed, public "debug" keystore is committed on purpose: every CI build is signed with the
@@ -26,6 +28,14 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+    }
+
+    // "github" is installed by hand from GitHub and offers its own updates; "play" goes to Google Play,
+    // which forbids an app updating itself, so it has no updater.
+    flavorDimensions += "dist"
+    productFlavors {
+        create("github") { dimension = "dist" }
+        create("play") { dimension = "dist" }
     }
 
     // Only the two languages the app has; libraries ship strings for dozens of others.
@@ -68,6 +78,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     // This is a sideloaded personal app; style/lint findings must not block building the APK.
     lint {
