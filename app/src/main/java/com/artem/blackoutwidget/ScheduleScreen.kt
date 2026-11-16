@@ -27,6 +27,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -136,9 +139,9 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ " + stringResource(R.string.back)) }
+            IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back)) }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = onEdit) { Text(stringResource(R.string.edit)) }
+            IconButton(onClick = onEdit) { Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.edit)) }
         }
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {

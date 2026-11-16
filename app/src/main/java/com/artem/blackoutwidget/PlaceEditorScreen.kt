@@ -18,6 +18,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -114,7 +117,7 @@ fun PlaceEditorScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ " + stringResource(R.string.back)) }
+            IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back)) }
         }
         Text(
             stringResource(if (stored) R.string.settings_place_card else R.string.place_new),
