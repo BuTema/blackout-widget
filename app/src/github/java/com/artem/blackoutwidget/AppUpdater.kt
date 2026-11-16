@@ -107,7 +107,8 @@ object AppUpdater {
         val request = DownloadManager.Request(Uri.parse(info.url))
             .setTitle(app.getString(R.string.app_name))
             .setMimeType(MIME)
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            // Progress while downloading only: no "download complete" notification, the installer opens by itself.
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
             .setDestinationInExternalFilesDir(app, Environment.DIRECTORY_DOWNLOADS, "blackout-widget-${info.build}.apk")
         val id = manager.enqueue(request)
         Toast.makeText(app, R.string.update_downloading, Toast.LENGTH_SHORT).show()
