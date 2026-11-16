@@ -6,6 +6,7 @@ import android.content.Context
 object AppUpdater {
     const val enabled = false
     suspend fun check(ctx: Context): UpdateInfo? = null
+    suspend fun checkNow(ctx: Context): UpdateResult = UpdateResult(null)
     fun dismiss(ctx: Context, info: UpdateInfo) {}
     fun install(ctx: Context, info: UpdateInfo) {}
 }

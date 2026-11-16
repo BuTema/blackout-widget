@@ -53,6 +53,20 @@ object AppUpdater {
         else UpdateInfo(build, url)
     }
 
+    /** The check behind the button in Settings: asks GitHub now and tells a failure apart from "up to date". */
+    suspend fun checkNow(ctx: Context): UpdateResult = withContext(Dispatchers.IO) {
+        val current = BuildConfig.COMMIT
+        val p = prefs(ctx)
+        val found = try {
+            fetchLatest()
+        } catch (e: Exception) {
+            null
+        } ?: return@withContext UpdateResult(null, failed = true)
+        p.edit().putString("build", found.build).putString("url", found.url)
+            .putLong("checked", System.currentTimeMillis()).remove("dismissed").apply()
+        UpdateResult(if (current == "dev" || found.build == current) null else found)
+    }
+
     private fun fetchLatest(): UpdateInfo? {
         val connection = URL(RELEASE).openConnection() as HttpURLConnection
         try {

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -258,14 +259,44 @@ fun SettingsScreen(onBack: () -> Unit) {
                 },
                 valueRange = 0f..1f,
             )
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    Prefs.setPendingWidgetPlace(ctx, null)
-                    requestPinWidget(ctx)
-                },
-            ) {
-                Text(stringResource(R.string.add_widget))
+        }
+
+        // ---- About: version and the update check ----
+        SectionCard(stringResource(R.string.settings_about_card)) {
+            Text(stringResource(R.string.version_label, BuildConfig.VERSION_NAME + " (" + BuildConfig.COMMIT + ")"))
+            if (AppUpdater.enabled) {
+                var checking by remember { mutableStateOf(false) }
+                var found by remember { mutableStateOf<UpdateInfo?>(null) }
+                var status by remember { mutableStateOf<String?>(null) }
+                val latest = stringResource(R.string.update_latest)
+                val failed = stringResource(R.string.update_failed)
+                val available = stringResource(R.string.update_found)
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !checking,
+                    onClick = {
+                        checking = true
+                        status = null
+                        scope.launch {
+                            val result = AppUpdater.checkNow(ctx)
+                            found = result.info
+                            status = when {
+                                result.failed -> failed
+                                result.info != null -> available
+                                else -> latest
+                            }
+                            checking = false
+                        }
+                    },
+                ) {
+                    Text(stringResource(if (checking) R.string.update_checking else R.string.update_check))
+                }
+                status?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                found?.let { update ->
+                    Button(modifier = Modifier.fillMaxWidth(), onClick = { AppUpdater.install(ctx, update) }) {
+                        Text(stringResource(R.string.update_install))
+                    }
+                }
             }
         }
         Spacer(Modifier.padding(bottom = 8.dp))

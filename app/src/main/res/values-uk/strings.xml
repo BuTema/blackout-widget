@@ -152,4 +152,11 @@
     <string name="update_later">Пізніше</string>
     <string name="update_downloading">Завантаження оновлення…</string>
     <string name="update_allow">Дозвольте встановлення з цього застосунку й натисніть «Оновити» ще раз.</string>
+    <string name="settings_about_card">Про застосунок</string>
+    <string name="version_label">Версія: %1$s</string>
+    <string name="update_check">Перевірити оновлення</string>
+    <string name="update_checking">Перевірка…</string>
+    <string name="update_latest">У вас остання версія</string>
+    <string name="update_failed">Не вдалося перевірити оновлення</string>
+    <string name="update_found">Доступна нова версія</string>
 </resources>

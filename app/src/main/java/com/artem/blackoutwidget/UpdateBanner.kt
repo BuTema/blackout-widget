@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.dp
 /** A newer build of the app is published: [build] identifies it, [url] is where its APK is. */
 class UpdateInfo(val build: String, val url: String)
 
+/** Result of an update check made on request: [info] is the newer build, [failed] means it could not be checked. */
+class UpdateResult(val info: UpdateInfo?, val failed: Boolean = false)
+
 /**
  * "A new version is available" card for the home screen. It exists only in the build that is installed by
  * hand from GitHub; the Google Play build updates through Google Play and shows nothing here.
