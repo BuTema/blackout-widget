@@ -1,6 +1,7 @@
 package com.artem.blackoutwidget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
