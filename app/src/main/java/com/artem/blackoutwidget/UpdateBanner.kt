@@ -23,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 /** A newer build of the app is published: [build] identifies it, [url] is where its APK is. */
-class UpdateInfo(val build: String, val url: String)
+class UpdateInfo(val build: String, val url: String, val number: Int? = null)
 
 /** Result of an update check made on request: [info] is the newer build, [failed] means it could not be checked. */
 class UpdateResult(val info: UpdateInfo?, val failed: Boolean = false)

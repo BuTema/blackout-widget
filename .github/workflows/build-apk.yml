@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+# A newer push cancels the build still running for an older one, so an old build can never finish later
+# and replace the newer "Latest build" release.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -80,4 +86,4 @@ jobs:
           cp app/build/outputs/apk/github/debug/*.apk blackout-widget-debug.apk
           gh release delete latest --cleanup-tag --yes || true
           gh release create latest blackout-widget.apk blackout-widget-debug.apk --title "Latest build" --prerelease \
-            --notes "Automatic build of ${GITHUB_SHA::7}. blackout-widget.apk is the small one; blackout-widget-debug.apk is the same app without shrinking, in case something misbehaves."
+            --notes "Automatic build of ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER}). blackout-widget.apk is the small one; blackout-widget-debug.apk is the same app without shrinking, in case something misbehaves."

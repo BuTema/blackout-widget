@@ -41,7 +41,8 @@ object AppUpdater {
             try {
                 val found = fetchLatest()
                 if (found != null) {
-                    p.edit().putString("build", found.build).putString("url", found.url).putLong("checked", now).apply()
+                    p.edit().putString("build", found.build).putString("url", found.url)
+                        .putInt("number", found.number ?: 0).putLong("checked", now).apply()
                 }
             } catch (e: Exception) {
                 // Offline or rate-limited: keep what was found last time and try again later.
@@ -49,8 +50,10 @@ object AppUpdater {
         }
         val build = p.getString("build", null)
         val url = p.getString("url", null)
-        if (build == null || url == null || build == current || build == p.getString("dismissed", null)) null
-        else UpdateInfo(build, url)
+        val number = p.getInt("number", 0).takeIf { it > 0 }
+        if (build == null || url == null || build == p.getString("dismissed", null)) return@withContext null
+        val info = UpdateInfo(build, url, number)
+        if (isNewer(info)) info else null
     }
 
     /** The check behind the button in Settings: asks GitHub now and tells a failure apart from "up to date". */
@@ -62,10 +65,17 @@ object AppUpdater {
         } catch (e: Exception) {
             null
         } ?: return@withContext UpdateResult(null, failed = true)
-        p.edit().putString("build", found.build).putString("url", found.url)
+        p.edit().putString("build", found.build).putString("url", found.url).putInt("number", found.number ?: 0)
             .putLong("checked", System.currentTimeMillis()).remove("dismissed").apply()
-        UpdateResult(if (current == "dev" || found.build == current) null else found)
+        UpdateResult(if (current == "dev" || !isNewer(found)) null else found)
     }
+
+    /**
+     * Newer means a higher build number than this one (the number of the CI run, which is also the version code),
+     * so a release that is older or the same never prompts; without a number in the notes the commits are compared.
+     */
+    private fun isNewer(info: UpdateInfo): Boolean =
+        if (info.number != null) info.number > BuildConfig.VERSION_CODE else info.build != BuildConfig.COMMIT
 
     private fun fetchLatest(): UpdateInfo? {
         val connection = URL(RELEASE).openConnection() as HttpURLConnection
@@ -77,10 +87,11 @@ object AppUpdater {
             if (connection.responseCode != 200) return null
             val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
             val build = Regex("build of ([0-9a-f]{7,40})").find(json.optString("body"))?.groupValues?.get(1) ?: return null
+            val number = Regex("run (\\d+)").find(json.optString("body"))?.groupValues?.get(1)?.toIntOrNull()
             val assets = json.optJSONArray("assets") ?: return null
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
-                if (asset.optString("name") == APK) return UpdateInfo(build.take(7), asset.getString("browser_download_url"))
+                if (asset.optString("name") == APK) return UpdateInfo(build.take(7), asset.getString("browser_download_url"), number)
             }
             return null
         } finally {
