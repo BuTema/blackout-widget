@@ -35,6 +35,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * With a single place, or when the place was chosen in the app just before, it does not ask.
  */
 class WidgetConfigActivity : ComponentActivity() {
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(L10n.wrap(base))
+
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
     override fun onCreate(savedInstanceState: Bundle?) {

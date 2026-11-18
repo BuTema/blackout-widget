@@ -130,6 +130,26 @@ fun SettingsScreen(onBack: () -> Unit) {
             Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium)
         }
 
+        // ---- Language: the person's choice, the system never changes it ----
+        SectionCard(stringResource(R.string.language_title)) {
+            for (language in L10n.SUPPORTED) {
+                RadioRow(
+                    title = stringResource(L10n.nameOf(language)),
+                    description = "",
+                    selected = L10n.active == language,
+                    onSelect = {
+                        if (L10n.active != language) {
+                            L10n.set(ctx, language)
+                            val app = ctx.applicationContext
+                            Notifier.ensureChannels(app)
+                            scope.launch { ScheduleWidget().updateAll(app) }
+                            ctx.findActivity()?.recreate()
+                        }
+                    },
+                )
+            }
+        }
+
         // ---- Notifications ----
         SectionCard(stringResource(R.string.notifications)) {
             SwitchRow(stringResource(R.string.notify_changed), notifyChanged) {

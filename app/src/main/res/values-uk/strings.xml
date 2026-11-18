@@ -159,4 +159,5 @@
     <string name="update_latest">У вас остання версія</string>
     <string name="update_failed">Не вдалося перевірити оновлення</string>
     <string name="update_found">Доступна нова версія</string>
+    <string name="language_title">Мова</string>
 </resources>

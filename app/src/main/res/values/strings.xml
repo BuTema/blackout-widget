@@ -159,4 +159,9 @@
     <string name="update_latest">You have the latest version</string>
     <string name="update_failed">Could not check for updates</string>
     <string name="update_found">A new version is available</string>
+    <string name="language_title">Language</string>
+    <string name="lang_uk" translatable="false">Українська</string>
+    <string name="lang_ru" translatable="false">Русский</string>
+    <string name="lang_en" translatable="false">English</string>
+    <string name="language_choose" translatable="false">Мова · Язык · Language</string>
 </resources>

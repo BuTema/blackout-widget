@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Графики света</string>
+    <string name="widget_description">График отключений света</string>
+    <string name="default_home_name">Дом</string>
+
+
+    <string name="transparency">Прозрачность виджета</string>
+    <string name="transparency_dark">Непрозрачность фона, тёмная тема: %1$d%%</string>
+    <string name="transparency_light">Непрозрачность фона, светлая тема: %1$d%%</string>
+
+    <string name="save_and_refresh">Сохранить и обновить</string>
+    <string name="refreshing">Обновление…</string>
+    <string name="add_widget">Добавить виджет на главный экран</string>
+    <string name="group_in_use">Очередь: %1$s</string>
+    <string name="group_unknown">Очередь ещё не определена</string>
+    <string name="last_data">Последние данные: %1$s</string>
+    <string name="last_error">Последнее обновление не удалось: %1$s</string>
+
+    <string name="power_on_next">Свет будет</string>
+    <string name="power_off_next">Света не будет</string>
+    <string name="tomorrow_suffix">" (завтра)"</string>
+    <string name="all_day_on">Свет есть весь день</string>
+    <string name="no_data">Графика пока нет</string>
+    <string name="never_updated">Ещё не обновлено</string>
+    <string name="updated_today">Обновлено в %1$s</string>
+    <string name="updated_date">Обновлено %1$s в %2$s</string>
+
+    <string name="err_not_configured">Укажите улицу и номер дома или очередь в приложении</string>
+    <string name="err_no_group">Не удалось определить очередь по этому адресу</string>
+    <string name="err_no_days">Нет графика для очереди %1$s</string>
+
+    <string name="settings">Настройки</string>
+    <string name="back">Назад</string>
+    <string name="tab_today">Сегодня</string>
+    <string name="tab_tomorrow">Завтра</string>
+    <string name="refresh">Обновить</string>
+    <string name="until_on">до включения света</string>
+    <string name="until_off">до отключения</string>
+    <string name="no_schedule_for_day">График на этот день ещё не опубликован</string>
+    <string name="tomorrow_hint">Как только график на завтра появится, вы получите уведомление</string>
+    <string name="empty_hint">Добавьте место в настройках и нажмите «Сохранить и обновить»</string>
+    <string name="duration_fmt">%1$d ч %2$02d мин</string>
+
+    <string name="notifications">Уведомления</string>
+    <string name="notify_changed">График изменился</string>
+    <string name="notify_tomorrow">Опубликован график на завтра</string>
+    <string name="reminders_title">Напоминания о смене состояния света</string>
+    <string name="lead_60">За 1 час</string>
+    <string name="lead_30">За 30 минут</string>
+    <string name="lead_15">За 15 минут</string>
+    <string name="at_change">В момент смены</string>
+    <string name="remind_off">Об отключении</string>
+    <string name="remind_on">О появлении света</string>
+    <string name="notif_blocked">Уведомления для приложения отключены в системе</string>
+    <string name="notif_allow">Разрешить</string>
+    <string name="notif_test">Отправить тестовое уведомление</string>
+    <string name="notif_test_sent">Тестовое уведомление отправлено</string>
+    <string name="notif_test_title">Графики света</string>
+    <string name="notif_test_text">Уведомления работают</string>
+
+    <string name="channel_changes">Изменения графика</string>
+    <string name="channel_reminders">Напоминания о свете</string>
+    <string name="day_today">сегодня</string>
+    <string name="day_tomorrow">завтра</string>
+    <string name="notif_published_title">Опубликован график на %1$s</string>
+    <string name="notif_changed_title">График на %1$s изменился</string>
+    <string name="notif_off_ranges">Отключат: %1$s</string>
+    <string name="notif_no_outages">Отключений не запланировано</string>
+    <string name="reminder_off_title">Скоро отключат свет</string>
+    <string name="reminder_off_text">Свет отключат в %1$s (через %2$s)</string>
+    <string name="reminder_on_title">Скоро вернут свет</string>
+    <string name="reminder_on_text">Свет вернут в %1$s (через %2$s)</string>
+    <string name="reminder_off_now_title">Свет отключают сейчас</string>
+    <string name="reminder_off_now_text_until">Вернут в %1$s</string>
+    <string name="reminder_on_now_title">Свет возвращают сейчас</string>
+    <string name="reminder_on_now_text_until">Дальше отключат в %1$s</string>
+    <string name="reminder_now_text_unknown">Следующая смена пока неизвестна</string>
+    <string name="minutes_short">%1$d мин</string>
+    <string name="hours_short">%1$d ч</string>
+
+    <string name="field_name">Название места (на виджете)</string>
+    <string name="field_city">Город / посёлок</string>
+    <string name="field_street">Улица</string>
+    <string name="field_house">Дом</string>
+
+    <string name="settings_place_card">Место</string>
+    <string name="settings_source">Как определить очередь</string>
+    <string name="source_address">По адресу</string>
+    <string name="source_address_desc">Подскажем улицы и дома из базы ДТЭК и сами найдём очередь</string>
+    <string name="source_group">По очереди</string>
+    <string name="source_group_desc">Если вы уже знаете свою очередь (подгруппу)</string>
+    <string name="pick_group">Выберите очередь</string>
+    <string name="settings_widget_card">Виджет</string>
+
+    <string name="addr_hint">Начните вводить улицу — подскажем варианты из базы ДТЭК</string>
+    <string name="addr_city_not_found">Такого населённого пункта нет в базе ДТЭК. Выберите из списка</string>
+    <string name="addr_street_not_found">Такой улицы нет в базе ДТЭК. Выберите из списка</string>
+    <string name="addr_house_not_found">У ДТЭК нет графика для этого номера дома (вне аварийных отключений). Выберите из списка</string>
+    <string name="addr_no_group">ДТЭК не указывает очередь для этого дома. Выберите очередь вручную</string>
+    <string name="addr_checking">Проверяем адрес…</string>
+    <string name="addr_found">✓ Адрес найден · очередь %1$s</string>
+    <string name="addr_saved">✓ Сохранённый адрес · очередь %1$s</string>
+    <string name="addr_unverified">Не удалось проверить адрес (нет связи с ДТЭК). Его можно сохранить как есть</string>
+    <string name="save_disabled_hint">Заполните адрес из подсказок или выберите очередь</string>
+
+    <string name="widget_pick_place">Какое место показывать на виджете?</string>
+    <string name="cancel">Отмена</string>
+    <string name="text_size">Размер времени на виджете: %1$d%%</string>
+    <string name="places_empty">Мест пока нет. Добавьте первое</string>
+    <string name="place_new">Новое место</string>
+    <string name="place_not_configured">Ещё не заполнено</string>
+    <string name="place_notify">Уведомления для этого места</string>
+    <string name="delete_place">Удалить место</string>
+    <string name="delete_confirm_title">Удалить «%1$s»?</string>
+    <string name="delete_confirm_text">Сохранённый график и виджеты этого места будут убраны</string>
+    <string name="delete">Удалить</string>
+    <string name="widget_for_place">Добавить виджет этого места</string>
+    <string name="region_title">Область (сеть ДТЭК)</string>
+    <string name="region_odesa">Одесская обл.</string>
+    <string name="region_kyiv_region">Киевская обл.</string>
+    <string name="region_dnipro">Днепр / Днепровщина</string>
+    <string name="region_kyiv">г. Киев</string>
+    <string name="widget_choose_place">Коснитесь, чтобы выбрать место</string>
+    <string name="edit">Редактировать</string>
+    <string name="home_title">Графики света</string>
+    <string name="home_next">Далее: %1$s</string>
+    <string name="home_all_day_on">Свет есть весь день</string>
+    <string name="home_drag_hint">Удерживайте карточку и перетащите, чтобы изменить порядок</string>
+    <string name="emergency_title">Экстренное отключение</string>
+    <string name="emergency_until">до %1$s</string>
+    <string name="emergency_reason">Причина: %1$s</string>
+    <string name="addr_emergency_no_group">По этому дому сейчас действует экстренное отключение, поэтому ДТЭК не указывает очередь. Адрес можно сохранить: график появится после окончания</string>
+    <string name="emergency_no_group">ДТЭК не указывает очередь этого дома во время отключения, поэтому показано только экстренное отключение, без планового графика</string>
+    <string name="addr_street_group">Дома этой улицы из списка ДТЭК имеют очередь %1$s. У вашего дома она может отличаться</string>
+    <string name="addr_use_group">Использовать очередь %1$s</string>
+    <string name="addr_use_neighbor">Показывать и аварийные отключения этого дома, и график ближайшей очереди %1$s</string>
+    <string name="group_approx_short">Очередь: %1$s (≈)</string>
+    <string name="group_approx">Очередь: %1$s (ближайшая, по соседним домам)</string>
+    <string name="preview_name">Дом</string>
+    <string name="preview_updated">Обновлено в 12:00</string>
+    <string name="preview_group">Очередь: 6.2</string>
+    <string name="widget_label_2x2">График 2×2</string>
+    <string name="widget_label_1x2">Колонка 1×2</string>
+    <string name="widget_label_4x1">Полоска 4×1</string>
+    <string name="widget_label_4x2">Карточка 4×2</string>
+    <string name="exact_alarm_hint">Напоминания могут опаздывать на несколько минут, пока вы не разрешите приложению точные будильники.</string>
+    <string name="exact_alarm_allow">Разрешить точные напоминания</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_hint">Новая версия приложения готова к установке.</string>
+    <string name="update_install">Обновить</string>
+    <string name="update_later">Позже</string>
+    <string name="update_downloading">Загрузка обновления…</string>
+    <string name="update_allow">Разрешите установку из этого приложения и нажмите «Обновить» ещё раз.</string>
+    <string name="settings_about_card">О приложении</string>
+    <string name="version_label">Версия: %1$s</string>
+    <string name="update_check">Проверить обновления</string>
+    <string name="update_checking">Проверка…</string>
+    <string name="update_latest">У вас последняя версия</string>
+    <string name="update_failed">Не удалось проверить обновления</string>
+    <string name="update_found">Доступна новая версия</string>
+    <string name="language_title">Язык</string>
+</resources>

@@ -40,7 +40,7 @@ android {
 
     // Only the two languages the app has; libraries ship strings for dozens of others.
     androidResources {
-        localeFilters += listOf("en", "uk")
+        localeFilters += listOf("en", "uk", "ru")
     }
 
     // The key that signs what is uploaded to Google Play. Its file and passwords come from the build

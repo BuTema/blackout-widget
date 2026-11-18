@@ -171,6 +171,8 @@ class ScheduleWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        // The application context always has the language chosen in the app, whoever started this update.
+        val context = context.applicationContext
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val initial = buildUi(context, appWidgetId)
         provideContent {

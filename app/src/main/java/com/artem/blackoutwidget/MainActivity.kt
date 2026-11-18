@@ -12,6 +12,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(L10n.wrap(base))
+
     /** The place a widget or a notification asked to open; consumed by the UI. */
     private val requestedPlace = mutableStateOf<String?>(null)
 
@@ -77,9 +89,33 @@ private const val SCREEN_DETAIL = "detail"
 private const val SCREEN_SETTINGS = "settings"
 private const val SCREEN_EDIT = "edit"
 
+/** The very first screen: the language is chosen once here and afterwards only changed in Settings. */
+@Composable
+private fun LanguageChooser(onChosen: (String) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.language_choose), style = MaterialTheme.typography.headlineSmall)
+        for (language in L10n.SUPPORTED) {
+            Button(modifier = Modifier.fillMaxWidth(), onClick = { onChosen(language) }) {
+                Text(stringResource(L10n.nameOf(language)))
+            }
+        }
+    }
+}
+
 @Composable
 private fun AppRoot(requested: String?, onRequestHandled: () -> Unit) {
     val ctx = LocalContext.current
+    if (!L10n.isChosen(ctx)) {
+        LanguageChooser { language ->
+            L10n.set(ctx, language)
+            ctx.findActivity()?.recreate()
+        }
+        return
+    }
     // First launch (no place yet) opens the editor; afterwards the list of places is the home screen.
     val firstRun = remember { Prefs.places(ctx).isEmpty() }
     var screen by rememberSaveable { mutableStateOf(if (firstRun) SCREEN_EDIT else SCREEN_HOME) }
