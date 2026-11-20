@@ -14,7 +14,10 @@ android {
         targetSdk = 36
         // Google Play wants a higher versionCode for every upload; CI builds number themselves.
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
-        versionName = "1.0"
+        // 1.0.<CI run number>: every build has its own, rising version (1.0.0 for a local build).
+        versionName = "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+        // The only native code is a small library of Compose; phones are ARM, emulator images are not needed.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         // The commit this build was made from (CI only); the sideload build compares it with the latest release.
         buildConfigField("String", "COMMIT", "\"${System.getenv("GITHUB_SHA")?.take(7) ?: "dev"}\"")
     }
@@ -27,6 +30,11 @@ android {
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+            // All three signature schemes: some phone makers' installers are picky about APKs signed
+            // with the newer ones only.
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
@@ -54,6 +62,9 @@ android {
                 storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("UPLOAD_KEY_ALIAS")
                 keyPassword = System.getenv("UPLOAD_KEY_PASSWORD")
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }

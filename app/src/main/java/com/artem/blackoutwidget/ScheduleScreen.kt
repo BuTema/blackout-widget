@@ -4,6 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +47,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -107,8 +115,6 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
 
     val days = cache?.days ?: emptyMap()
     val today = now.toLocalDate()
-    val date = if (tab == 0) today else today.plusDays(1)
-    val hours = days[date]
     val widgetState = ScheduleLogic.state(days, now)
 
     val title = (place?.name ?: "").ifBlank { stringResource(R.string.default_home_name) }
@@ -134,6 +140,17 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // A swipe to the left shows tomorrow, to the right today; vertical scrolling is not affected.
+            .pointerInput(Unit) {
+                var drag = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { drag = 0f },
+                    onHorizontalDrag = { _, amount -> drag += amount },
+                    onDragEnd = {
+                        if (drag < -SWIPE_PX && tab == 0) tab = 1 else if (drag > SWIPE_PX && tab == 1) tab = 0
+                    },
+                )
+            }
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -178,35 +195,48 @@ fun ScheduleScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit) {
             if (emergency != null) EmergencyNotice(emergency, dark, noGroup = cache?.group.isNullOrBlank())
             DaySwitch(tab = tab, today = today, onSelect = { tab = it })
 
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (hours == null) {
-                        Text(stringResource(R.string.no_schedule_for_day), style = MaterialTheme.typography.bodyLarge)
-                        if (tab == 1 && settings.notifyTomorrow) {
-                            Text(stringResource(R.string.tomorrow_hint), style = MaterialTheme.typography.bodySmall)
-                        }
-                    } else {
-                        val slots = ScheduleLogic.slotsOf(hours)
-                        val currentSlot = if (tab == 0) now.hour * 2 + now.minute / 30 else -1
-                        HourGrid(slots, ScheduleLogic.emergencySlotsOf(hours), currentSlot)
+            // The day slides in from the side it was swiped from; everything inside depends on the target day only.
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = {
+                    val toTomorrow = targetState > initialState
+                    (slideInHorizontally { w -> if (toTomorrow) w else -w } + fadeIn()) togetherWith
+                        (slideOutHorizontally { w -> if (toTomorrow) -w else w } + fadeOut())
+                },
+                label = "day",
+            ) { t ->
+                val date = if (t == 0) today else today.plusDays(1)
+                val hours = days[date]
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (hours == null) {
+                            Text(stringResource(R.string.no_schedule_for_day), style = MaterialTheme.typography.bodyLarge)
+                            if (t == 1 && settings.notifyTomorrow) {
+                                Text(stringResource(R.string.tomorrow_hint), style = MaterialTheme.typography.bodySmall)
+                            }
+                        } else {
+                            val slots = ScheduleLogic.slotsOf(hours)
+                            val currentSlot = if (t == 0) now.hour * 2 + now.minute / 30 else -1
+                            HourGrid(slots, ScheduleLogic.emergencySlotsOf(hours), currentSlot)
 
-                        val group = (cache?.group ?: "").removePrefix("GPV")
-                        if (group.isNotBlank()) {
-                            Text(
-                                stringResource(if (cache?.approxGroup == true) R.string.group_approx else R.string.group_in_use, group),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                            )
-                        }
-
-                        Column {
-                            for (p in ScheduleLogic.periods(mapOf(date to hours), splitEmergency = true)) {
-                                PeriodRow(
-                                    period = p,
-                                    dark = dark,
-                                    current = tab == 0 && !now.isBefore(p.start) && now.isBefore(p.end),
-                                    past = tab == 0 && !p.end.isAfter(now),
+                            val group = (cache?.group ?: "").removePrefix("GPV")
+                            if (group.isNotBlank()) {
+                                Text(
+                                    stringResource(if (cache?.approxGroup == true) R.string.group_approx else R.string.group_in_use, group),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
                                 )
+                            }
+
+                            Column {
+                                for (p in ScheduleLogic.periods(mapOf(date to hours), splitEmergency = true)) {
+                                    PeriodRow(
+                                        period = p,
+                                        dark = dark,
+                                        current = t == 0 && !now.isBefore(p.start) && now.isBefore(p.end),
+                                        past = t == 0 && !p.end.isAfter(now),
+                                    )
+                                }
                             }
                         }
                     }
@@ -385,3 +415,6 @@ private fun PeriodRow(period: Period, dark: Boolean, current: Boolean, past: Boo
         )
     }
 }
+
+/** How far (in pixels) a horizontal drag must go to count as a swipe between the days. */
+private const val SWIPE_PX = 120f
