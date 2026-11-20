@@ -40,7 +40,7 @@ jobs:
         continue-on-error: true
 
       - name: Build APKs (small release build and a plain debug one)
-        run: ./gradlew assembleGithubRelease assembleGithubDebug
+        run: ./gradlew assembleGithubRelease assembleGithubDebug assemblePlayRelease
 
       # The Google Play bundle is signed with the upload key from the repository secrets
       # (UPLOAD_KEYSTORE_B64, UPLOAD_KEYSTORE_PASSWORD, UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD).
@@ -75,6 +75,7 @@ jobs:
           path: |
             app/build/outputs/apk/github/release/*.apk
             app/build/outputs/apk/github/debug/*.apk
+            app/build/outputs/apk/play/release/*.apk
           if-no-files-found: error
 
       - name: Publish the APK as the "Latest build" release
@@ -84,6 +85,8 @@ jobs:
         run: |
           cp app/build/outputs/apk/github/release/*.apk blackout-widget.apk
           cp app/build/outputs/apk/github/debug/*.apk blackout-widget-debug.apk
+          # The Google Play variant as an APK (no self-updater, no install permission), for phones whose installer objects to the others.
+          cp app/build/outputs/apk/play/release/*.apk blackout-widget-lite.apk
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest blackout-widget.apk blackout-widget-debug.apk --title "Latest build" --prerelease \
+          gh release create latest blackout-widget.apk blackout-widget-debug.apk blackout-widget-lite.apk --title "Latest build" --prerelease \
             --notes "Automatic build of ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER}). blackout-widget.apk is the small one; blackout-widget-debug.apk is the same app without shrinking, in case something misbehaves."
